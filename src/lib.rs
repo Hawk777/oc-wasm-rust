@@ -45,5 +45,6 @@ extern crate alloc;
 
 pub mod common;
 pub mod error;
+pub mod gpu;
 
 mod helpers;
