@@ -45,6 +45,7 @@ extern crate alloc;
 
 pub mod common;
 pub mod error;
+pub mod filesystem;
 pub mod gpu;
 pub mod screen;
 
