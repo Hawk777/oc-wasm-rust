@@ -48,6 +48,7 @@ pub mod eeprom;
 pub mod error;
 pub mod filesystem;
 pub mod gpu;
+pub mod inventory;
 pub mod redstone;
 pub mod screen;
 
