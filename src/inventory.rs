@@ -327,7 +327,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
 	}
 
 	/// Moves items between two inventories, taking from only a specific slot in the source.
@@ -369,7 +369,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				)),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
 	}
 
 	/// Moves items between two inventories, taking from only a specific slot in the source and
@@ -410,7 +410,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				)),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
 	}
 
 	/// Returns the amount of fluid in a tank, in millibuckets.
@@ -436,7 +436,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&TwoValues(u8::from(side), tank.get())),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
 	}
 
 	/// Returns the amount of fluid a tank can hold, in millibuckets.
@@ -462,7 +462,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&TwoValues(u8::from(side), tank.get())),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
 	}
 
 	/// Returns the fluid in a tank.
@@ -545,7 +545,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
 			)
 			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
 	}
 
 	/// Makes a method call that accepts one or more slot parameters and converts a
@@ -572,7 +572,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&params),
 			)
 			.await;
-		Self::unpack_bad_parameters_with_message(ret, "invalid slot")
+		Locked::unpack_bad_parameters_with_message(ret, "invalid slot")
 	}
 
 	/// Converts a [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) into
