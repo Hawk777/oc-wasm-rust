@@ -1,6 +1,6 @@
 //! Provides high-level access to the GPU APIs.
 
-use crate::common::{Dimension, Point, Vector2};
+use crate::common::{Dimension, Point, Rgb, Vector2};
 use crate::error::Error;
 use crate::helpers::{FiveValues, Ignore, NullAndStringOr, OneValue, TwoValues};
 use alloc::borrow::ToOwned;
@@ -636,10 +636,6 @@ impl<'a> Debug for Locked<'a> {
 		Gpu::new(self.address).fmt(f)
 	}
 }
-
-/// A 24-bit RGB colour.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Rgb(pub u32);
 
 /// A palette index.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]

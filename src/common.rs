@@ -227,3 +227,7 @@ impl TryFrom<u8> for Colour {
 		}
 	}
 }
+
+/// A 24-bit RGB colour.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Rgb(pub u32);
