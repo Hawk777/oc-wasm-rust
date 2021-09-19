@@ -81,7 +81,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
 	///   inaccessible, or is not a filesystem.
 	pub async fn get_label(self) -> Result<Option<&'buffer str>, Error> {
-		let ret: OneValue<Option<&'buffer str>> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
 				.await?;
 		Ok(ret.0)
@@ -98,15 +98,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if the drive does not support labels or if the
 	///   label cannot be changed.
 	pub async fn set_label(self, label: Option<&str>) -> Result<Option<&'buffer str>, Error> {
-		let ret: Result<OneValue<Option<&'buffer str>>, oc_wasm_safe::error::Error> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				"setLabel",
-				Some(&OneValue(label)),
-			)
-			.await;
+		let ret: Result<OneValue<_>, oc_wasm_safe::error::Error> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"setLabel",
+			Some(&OneValue(label)),
+		)
+		.await;
 		if let Err(oc_wasm_safe::error::Error::BadParameters) = ret {
 			// This is returned if the filesystem has a label but the label cannot be modified, as
 			// happens for a tmpfs.
@@ -122,7 +121,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
 	///   inaccessible, or is not a filesystem.
 	pub async fn is_read_only(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isReadOnly", None)
 				.await?;
 		Ok(ret.0)
@@ -167,7 +166,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
 	///   inaccessible, or is not a filesystem.
 	pub async fn get_space_used(&mut self) -> Result<u64, Error> {
-		let ret: OneValue<u64> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "spaceUsed", None)
 				.await?;
 		Ok(ret.0)
@@ -225,7 +224,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   inaccessible, or is not a filesystem.
 	/// * [`Failed`](Error::Failed) is returned if the path does not exist or is a file.
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
-		let ret: OneValue<Option<Vec<DirectoryEntry<'buffer>>>> = component_method(
+		let ret: OneValue<Option<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -696,7 +695,7 @@ async fn seek_impl(
 		#[n(1)] Seek,
 		#[n(2)] i64,
 	);
-	let ret: Result<OneValue<u64>, oc_wasm_safe::error::Error> = component_method(
+	let ret: Result<OneValue<_>, oc_wasm_safe::error::Error> = component_method(
 		invoker,
 		buffer,
 		address,

@@ -131,7 +131,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
 	///   inaccessible, or is not a filesystem.
 	pub async fn get_label(self) -> Result<&'buffer str, Error> {
-		let ret: OneValue<&'buffer str> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
 				.await?;
 		Ok(ret.0)
@@ -149,7 +149,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   inaccessible, or is not a EEPROM.
 	/// * [`Failed`](Error::Failed) is returned if the EEPROM is read-only.
 	pub async fn set_label(self, label: &str) -> Result<&'buffer str, Error> {
-		let ret: NullAndStringOr<'_, OneValue<&'buffer str>> = component_method(
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -166,7 +166,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
 	///   inaccessible, or is not a EEPROM.
 	pub async fn get_size(&mut self) -> Result<usize, Error> {
-		let ret: OneValue<usize> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getSize", None)
 				.await?;
 		Ok(ret.0)
@@ -227,7 +227,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
 	///   inaccessible, or is not a EEPROM.
 	pub async fn get_data_size(&mut self) -> Result<usize, Error> {
-		let ret: OneValue<usize> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

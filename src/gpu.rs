@@ -95,7 +95,7 @@ impl<'a> Locked<'a> {
 	///   inaccessible, or is not a GPU.
 	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
-		let ret: OneValue<Option<Address>> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getScreen", None)
 				.await?;
 		Ok(ret.0)
@@ -230,7 +230,7 @@ impl<'a> Locked<'a> {
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
 	#[must_use = "This function is only useful for its return value"]
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<u8>> =
+		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "maxDepth", None)
 				.await?;
 		let ret = ret.into_result()?;
@@ -245,7 +245,7 @@ impl<'a> Locked<'a> {
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
 	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<u8>> =
+		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getDepth", None)
 				.await?;
 		let ret = ret.into_result()?;
@@ -609,7 +609,7 @@ impl<'a> Locked<'a> {
 		parameter: Dimension,
 		out_of_range_string: &str,
 	) -> Result<bool, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<bool>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,

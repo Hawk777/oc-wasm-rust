@@ -72,7 +72,7 @@ impl<'a> Locked<'a> {
 	///   inaccessible, or is not a screen.
 	#[must_use = "This function is only useful for its return value"]
 	pub async fn is_on(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isOn", None)
 				.await?;
 		Ok(ret.0)
@@ -84,7 +84,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
 	pub async fn turn_on(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOn", None)
 				.await?;
 		Ok(ret.0)
@@ -96,7 +96,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
 	pub async fn turn_off(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOff", None)
 				.await?;
 		Ok(ret.0)
@@ -134,7 +134,7 @@ impl<'a> Locked<'a> {
 	///   inaccessible, or is not a screen.
 	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_keyboards(&mut self) -> Result<Vec<Address>, Error> {
-		let ret: OneValue<Vec<Address>> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -154,7 +154,7 @@ impl<'a> Locked<'a> {
 	/// * [`Failed`](Error::Failed) is returned if the screen is not advanced enough to return
 	///   subpixel-granularity touch data.
 	pub async fn set_precise(&mut self, precise: bool) -> Result<bool, Error> {
-		let ret: NullAndStringOr<'_, OneValue<bool>> = component_method(
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -171,7 +171,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
 	pub async fn is_precise(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> =
+		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isPrecise", None)
 				.await?;
 		Ok(ret.0)
@@ -184,7 +184,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
 	pub async fn set_touch_mode_inverted(&mut self, inverted: bool) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -202,7 +202,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
 	pub async fn is_touch_mode_inverted(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

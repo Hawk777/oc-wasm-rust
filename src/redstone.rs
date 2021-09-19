@@ -265,7 +265,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   inaccessible, or is not a redstone component.
 	pub async fn set_side_output(&mut self, side: impl Side, level: u8) -> Result<u8, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<u8> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -360,7 +360,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let colour: u8 = colour.into();
-		let ret: OneValue<u8> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -385,7 +385,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   inaccessible, or is not a redstone component.
 	pub async fn get_comparator_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<u8> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -406,7 +406,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
 	///   inaccessible, or is not a redstone component.
 	pub async fn get_wake_threshold(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -429,7 +429,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
 	///   inaccessible, or is not a redstone component.
 	pub async fn set_wake_threshold(&mut self, threshold: u32) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -448,7 +448,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	}
 
 	async fn get_side_vanilla(&mut self, method: &str, side: u8) -> Result<u8, Error> {
-		let ret: OneValue<u8> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -491,7 +491,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: u8,
 		colour: u8,
 	) -> Result<u8, Error> {
-		let ret: OneValue<u8> = component_method(
+		let ret: OneValue<_> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,

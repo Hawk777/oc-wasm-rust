@@ -99,7 +99,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
 	///   specified side.
 	pub async fn get_inventory_size(&mut self, side: AbsoluteSide) -> Result<u32, Error> {
-		let ret: NullAndStringOr<'_, OneValue<u32>> = component_method(
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -124,7 +124,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: AbsoluteSide,
 		slot: NonZeroU32,
 	) -> Result<u32, Error> {
-		let ret: OneValue<u32> = self
+		let ret: OneValue<_> = self
 			.call_check_invalid_slots("getSlotStackSize", &TwoValues(u8::from(side), slot))
 			.await?;
 		Ok(ret.0)
@@ -145,7 +145,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: AbsoluteSide,
 		slot: NonZeroU32,
 	) -> Result<Option<NonZeroU32>, Error> {
-		let ret: OneValue<u32> = self
+		let ret: OneValue<_> = self
 			.call_check_invalid_slots("getSlotMaxStackSize", &TwoValues(u8::from(side), slot))
 			.await?;
 		Ok(NonZeroU32::new(ret.0))
@@ -173,7 +173,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		slot_b: NonZeroU32,
 		check_nbt: bool,
 	) -> Result<bool, Error> {
-		let ret: OneValue<bool> = self
+		let ret: OneValue<_> = self
 			.call_check_invalid_slots(
 				"compareStacks",
 				&FourValues(u8::from(side), slot_a, slot_b, check_nbt),
@@ -203,7 +203,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		slot_a: NonZeroU32,
 		slot_b: NonZeroU32,
 	) -> Result<bool, Error> {
-		let ret: OneValue<bool> = self
+		let ret: OneValue<_> = self
 			.call_check_invalid_slots(
 				"areStacksEquivalent",
 				&ThreeValues(u8::from(side), slot_a, slot_b),
@@ -231,17 +231,15 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: AbsoluteSide,
 		slot: NonZeroU32,
 	) -> Result<ItemStack<'buffer>, Error> {
-		let ret: Result<
-			NullAndStringOr<'_, OneValue<ItemStack<'buffer>>>,
-			oc_wasm_safe::error::Error,
-		> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getStackInSlot",
-			Some(&TwoValues(u8::from(side), slot)),
-		)
-		.await;
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getStackInSlot",
+				Some(&TwoValues(u8::from(side), slot)),
+			)
+			.await;
 		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
 	}
 
@@ -283,7 +281,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   specified side, or if reading full item information is disabled in the configuration
 	///   file.
 	pub async fn get_inventory_name(self, side: AbsoluteSide) -> Result<&'buffer str, Error> {
-		let ret: NullAndStringOr<'_, OneValue<&'buffer str>> = component_method(
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -318,7 +316,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		sink: AbsoluteSide,
 		count: u32,
 	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, oc_wasm_safe::error::Error> =
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -355,7 +353,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		count: u32,
 		source_slot: NonZeroU32,
 	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, oc_wasm_safe::error::Error> =
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -395,7 +393,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		source_slot: NonZeroU32,
 		sink_slot: NonZeroU32,
 	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, oc_wasm_safe::error::Error> =
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -427,7 +425,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: AbsoluteSide,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, oc_wasm_safe::error::Error> =
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -453,7 +451,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: AbsoluteSide,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, oc_wasm_safe::error::Error> =
+		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -829,14 +827,13 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
 	///   inventory size.
 	pub async fn get(self, slot: NonZeroU32) -> Result<ItemStack<'buffer>, Error> {
-		let ret: OneValue<Option<ItemStack<'buffer>>> =
-			oc_wasm_futures::invoke::value_indexed_read(
-				self.invoker,
-				self.buffer,
-				&self.descriptor,
-				Some(&OneValue(slot)),
-			)
-			.await?;
+		let ret: OneValue<Option<_>> = oc_wasm_futures::invoke::value_indexed_read(
+			self.invoker,
+			self.buffer,
+			&self.descriptor,
+			Some(&OneValue(slot)),
+		)
+		.await?;
 		if let Some(stack) = ret.0 {
 			Ok(stack)
 		} else {
@@ -864,7 +861,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
 	///   neither a transposer nor an inventory controller upgrade.
 	pub async fn count(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> =
+		let ret: OneValue<_> =
 			value_method::<(), _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
 				.await?;
 		Ok(ret.0)
@@ -922,11 +919,11 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
 		let len = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
-		let mut name: Option<&'buffer str> = None;
-		let mut label: Option<&'buffer str> = None;
-		let mut amount: Option<u32> = None;
-		let mut capacity: Option<u32> = None;
-		let mut has_tag: Option<bool> = None;
+		let mut name: Option<_> = None;
+		let mut label: Option<_> = None;
+		let mut amount: Option<_> = None;
+		let mut capacity: Option<_> = None;
+		let mut has_tag: Option<_> = None;
 		for _ in 0..len {
 			let key = d.str()?;
 			match key {
