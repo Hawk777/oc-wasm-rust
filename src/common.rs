@@ -3,7 +3,7 @@ use minicbor::{Decode, Encode};
 
 /// An error returned when converting an invalid value to an enumeration.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TryFromIntError(());
+pub struct TryFromIntError(pub(crate) ());
 
 impl core::fmt::Display for TryFromIntError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
