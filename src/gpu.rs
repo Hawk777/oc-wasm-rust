@@ -365,8 +365,7 @@ impl<'a> Locked<'a> {
 					Err(Error::BadComponent(oc_wasm_safe::error::Error::CborDecode))
 				}
 			}
-			Err(oc_wasm_safe::error::Error::BadParameters)
-			| Err(oc_wasm_safe::error::Error::Other) => {
+			Err(oc_wasm_safe::error::Error::BadParameters | oc_wasm_safe::error::Error::Other) => {
 				// BadParameters probably should be returned if the point is out of range. However,
 				// OpenComputers throws IndexOutOfBoundsException, not IllegalArgumentException, in
 				// this case, which maps to Other.
@@ -517,8 +516,7 @@ impl<'a> Locked<'a> {
 				ret.into_result()?;
 				Ok(())
 			}
-			Err(oc_wasm_safe::error::Error::BadParameters)
-			| Err(oc_wasm_safe::error::Error::Other) => {
+			Err(oc_wasm_safe::error::Error::BadParameters | oc_wasm_safe::error::Error::Other) => {
 				// BadParameters probably should be returned if the character involves more than
 				// one UTF-16 code unit. However, OpenComputers throws unqualified Exception, not
 				// IllegalArgumentException, in this case, which maps to Other.
