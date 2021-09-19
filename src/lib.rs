@@ -161,6 +161,7 @@ pub mod filesystem;
 pub mod gpu;
 pub mod inventory;
 pub mod redstone;
+pub mod robot;
 pub mod screen;
 
 mod helpers;
