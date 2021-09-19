@@ -699,9 +699,9 @@ async fn seek_impl(
 	let ret: Result<OneValue<u64>, oc_wasm_safe::error::Error> = component_method(
 		invoker,
 		buffer,
-		&address,
+		address,
 		"seek",
-		Some(&Params(&descriptor, basis, offset)),
+		Some(&Params(descriptor, basis, offset)),
 	)
 	.await;
 	match ret {
