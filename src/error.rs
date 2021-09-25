@@ -1,6 +1,6 @@
 //! Provides an error type used for higher level calls.
 
-use alloc::string::String;
+use alloc::{borrow::ToOwned, string::String};
 use core::fmt::{Display, Formatter};
 
 /// The errors that a component call can return.
@@ -46,6 +46,11 @@ impl std::error::Error for Error {
 
 impl From<oc_wasm_safe::error::Error> for Error {
 	fn from(source: oc_wasm_safe::error::Error) -> Self {
-		Self::BadComponent(source)
+		match source {
+			oc_wasm_safe::error::Error::BadParameters
+			| oc_wasm_safe::error::Error::TooManyDescriptors
+			| oc_wasm_safe::error::Error::Other => Self::Failed(source.as_str().to_owned()),
+			_ => Self::BadComponent(source),
+		}
 	}
 }
