@@ -559,9 +559,7 @@ impl<'handle, 'invoker, 'buffer> LockedReadHandle<'handle, 'invoker, 'buffer> {
 		match ret {
 			Ok(OneValue(Some(bytes))) => Ok(Some(bytes)),
 			Ok(OneValue(None)) => Ok(None),
-			Err(oc_wasm_safe::error::Error::Other) => {
-				Err(Error::Failed("not enough energy".to_owned()))
-			}
+			Err(oc_wasm_safe::error::Error::Other) => Err(Error::Failed("read failed".to_owned())),
 			Err(e) => Err(e.into()),
 		}
 	}
@@ -663,9 +661,7 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 		.await;
 		match ret {
 			Ok(_) => Ok(()),
-			Err(oc_wasm_safe::error::Error::Other) => {
-				Err(Error::Failed("not enough energy".to_owned()))
-			}
+			Err(oc_wasm_safe::error::Error::Other) => Err(Error::Failed("write failed".to_owned())),
 			Err(e) => Err(e.into()),
 		}
 	}
