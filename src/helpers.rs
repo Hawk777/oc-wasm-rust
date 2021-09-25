@@ -69,6 +69,15 @@ impl<'buffer, T: Decode<'buffer>> Decode<'buffer> for NullAndStringOr<'buffer, T
 #[cbor(array)]
 pub struct OneValue<T>(#[b(0)] pub T);
 
+/// A single optional value, usable as the parameter list for method calls that take one parameter
+/// or the return value for method calls that return one value.
+///
+/// It is not possible to simply use [`OneValue<Option<Foo>>`](OneValue), as one might think, due
+/// to <https://gitlab.com/twittner/minicbor/-/issues/10>.
+#[derive(Decode, Encode)]
+#[cbor(array)]
+pub struct OneOptionalValue<T>(#[b(0)] pub Option<T>);
+
 /// A pair of values, usable as the parameter list for method calls that take two parameters or the
 /// return value for method calls that return two values.
 #[derive(Decode, Encode)]

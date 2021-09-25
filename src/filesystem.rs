@@ -1,7 +1,7 @@
 //! Provides high-level access to the filesystem APIs.
 
 use crate::error::Error;
-use crate::helpers::{Ignore, OneValue, TwoValues};
+use crate::helpers::{Ignore, OneOptionalValue, OneValue, TwoValues};
 use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
@@ -224,7 +224,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   inaccessible, or is not a filesystem.
 	/// * [`Failed`](Error::Failed) is returned if the path does not exist or is a file.
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
-		let ret: OneValue<Option<_>> = component_method(
+		let ret: OneOptionalValue<Vec<DirectoryEntry<'buffer>>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
