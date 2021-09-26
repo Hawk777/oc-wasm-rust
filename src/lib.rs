@@ -90,7 +90,7 @@
 //! }
 //!
 //! #[no_mangle]
-//! fn run(_: i32) -> i32 {
+//! pub extern "C" fn run(_: i32) -> i32 {
 //! 	static mut PANIC_HOOK_SET: bool = false;
 //! 	static mut EXECUTOR: OnceCell<Cassette<Pin<Box<dyn Future<Output = ()>>>>> = OnceCell::new();
 //!
