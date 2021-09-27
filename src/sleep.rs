@@ -138,7 +138,7 @@ pub fn shortest_requested() -> i32 {
 /// This function should be called on entry to the `run` function to wake up any tasks whose sleep
 /// times have now expired.
 pub fn check_for_wakeups() {
-	imp::check_for_wakeups()
+	imp::check_for_wakeups();
 }
 
 /// Converts a floating-point time delta in seconds into a duration.
