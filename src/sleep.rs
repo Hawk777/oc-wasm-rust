@@ -90,6 +90,33 @@ impl Drop for UntilUptime {
 	}
 }
 
+/// A future that completes when a signal is in the signal queue.
+#[must_use = "A future does nothing unless awaited."]
+pub struct UntilSignal {
+	id: imp::Id,
+}
+
+impl Future for UntilSignal {
+	type Output = ();
+
+	fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
+		if computer::pull_signal_length().is_some() {
+			Poll::Ready(())
+		} else {
+			#[allow(clippy::unit_arg)] // Sometimes Id is (), sometimes it isn’t.
+			imp::register_signal(self.id, context.waker());
+			Poll::Pending
+		}
+	}
+}
+
+impl Drop for UntilSignal {
+	fn drop(&mut self) {
+		#[allow(clippy::unit_arg)] // Sometimes Id is (), sometimes it isn’t.
+		imp::unregister_signal(self.id);
+	}
+}
+
 /// Waits until the next timeslice.
 ///
 /// This future completes once the current timeslice has been relinquished and the next timeslice
@@ -114,6 +141,15 @@ pub fn for_uptime(duration: Duration) -> UntilUptime {
 pub fn until_uptime(deadline: NotNan<f64>) -> UntilUptime {
 	UntilUptime {
 		deadline,
+		id: imp::alloc_id(),
+	}
+}
+
+/// Sleeps until a signal is in the signal queue.
+///
+/// This future completes once at least one signal is present in the signal queue.
+pub fn until_signal() -> UntilSignal {
+	UntilSignal {
 		id: imp::alloc_id(),
 	}
 }
@@ -218,6 +254,23 @@ mod imp {
 		MAP.get_or_insert_with(BTreeMap::new)
 	}
 
+	/// Returns the map used to hold [`Waker`](Waker)s that are waiting for a signal.
+	///
+	/// # Safety
+	/// This function returns a mutable reference to the same object on every call. The caller must
+	/// not call `signal_map` a second time before it has dropped the first reference.
+	unsafe fn signal_map() -> &'static mut BTreeMap<u64, Waker> {
+		static mut MAP: Option<BTreeMap<u64, Waker>> = None;
+		// SAFETY: BTreeMap::new() does not call register_signal(), unregister_signal(), or
+		// pop_signal(), so a second mutable reference to MAP cannot be created via reentrancy.
+		// OC-Wasm is single-threaded, so a second reference to MAP cannot be created by another
+		// thread. The MAP variable is local to this function, so a second mutable reference cannot
+		// be created by other code accessing it directly. The documentation requires that the
+		// caller maintain only one reference at a time, so a second mutable reference cannot be
+		// created by additional calls to this function.
+		MAP.get_or_insert_with(BTreeMap::new)
+	}
+
 	/// Registers the executing task to wake up at the next timeslice.
 	pub fn register_next_timeslice(waker: &Waker) {
 		let waker = waker.clone();
@@ -240,6 +293,25 @@ mod imp {
 		// created within this thread while the first reference exists.
 		let elt = unsafe { deadline_map() }.remove(&(deadline, id));
 		// Extend the lifetime of the waker until here, to ensure that the deadline_map() reference
+		// is gone before Waker::drop() (if any) runs, just in case Waker::drop() calls this
+		// method.
+		drop(elt);
+	}
+
+	/// Registers the executing task to wake up when a signal arrives.
+	pub fn register_signal(id: Id, waker: &Waker) {
+		let waker = waker.clone();
+		// SAFETY: BTreeMap::insert() does not call signal_map(), so a second reference is not
+		// created within this thread while the first reference exists.
+		unsafe { signal_map() }.insert(id, waker);
+	}
+
+	/// Removes a registered signal sleep.
+	pub fn unregister_signal(id: Id) {
+		// SAFETY: BTreeMap::remove() does not call signal_map(), so a second reference is not
+		// created within this thread while the first reference exists.
+		let elt = unsafe { signal_map() }.remove(&id);
+		// Extend the lifetime of the waker until here, to ensure that the signal_map() reference
 		// is gone before Waker::drop() (if any) runs, just in case Waker::drop() calls this
 		// method.
 		drop(elt);
@@ -284,6 +356,21 @@ mod imp {
 		}
 	}
 
+	/// Pops and returns a [`Waker`](Waker) that is waiting for a signal.
+	///
+	/// Returns `None` if there is no such [`Waker`](Waker).
+	fn pop_signal() -> Option<Waker> {
+		// SAFETY: Neither BTreeMap::keys() nor btree_map::Keys::next() nor Option::copied() calls
+		// signal_map(), so a second reference is not created within this thread while the first
+		// reference exists.
+		let key = unsafe { signal_map() }.keys().next().copied();
+		key.and_then(|k| {
+			// SAFETY: BTreeMap::remove() does not call signal_map(), so a second reference is not
+			// created within this thread while the first reference exists.
+			unsafe { signal_map() }.remove(&k)
+		})
+	}
+
 	/// Wakes up all sleepers whose deadline has been reached.
 	pub fn check_for_wakeups() {
 		// Wake those waiting for the next timeslice. SAFETY: Vec::pop() does not call
@@ -297,6 +384,13 @@ mod imp {
 		let now = computer::uptime();
 		while let Some(sleeper) = pop_deadline_passed(now) {
 			sleeper.wake();
+		}
+
+		// If there is a signal, wake everyone waiting for one.
+		if computer::pull_signal_length().is_some() {
+			while let Some(sleeper) = pop_signal() {
+				sleeper.wake();
+			}
 		}
 	}
 }
@@ -343,6 +437,16 @@ mod imp {
 	pub fn unregister_uptime(_: NotNan<f64>, _: Id) {
 		// We do not have enough information to unregister. Doing nothing is harmless; it may just
 		// result in tasks being woken before they strictly need to be.
+	}
+
+	pub fn register_signal(_: Id, _: &Waker) {
+		// Do nothing; OpenComputers automatically runs a computer immediately when it has a
+		// signal, and in non-proper-waker mode all tasks are assumed to be re-polled on every
+		// execution.
+	}
+
+	pub fn unregister_signal(_: Id) {
+		// Do nothing; we don’t register the waker anyway.
 	}
 
 	pub fn shortest_requested() -> Duration {
