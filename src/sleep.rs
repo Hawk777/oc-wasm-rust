@@ -39,19 +39,6 @@ impl AsMinecraftTicks for Duration {
 	}
 }
 
-/// Allocates a unique 64-bit number.
-///
-/// Each call to this function returns a different 64-bit integer than any other call.
-fn alloc_id() -> u64 {
-	static mut COUNTER: u64 = 0;
-	// OC-Wasm is single-threaded, so a second thread cannot touch COUNTER at the same time. This
-	// function is a leaf (it does not call any other functions), so the same thread also cannot
-	// touch COUNTER at the same time via reentrancy.
-	let ret = unsafe { COUNTER };
-	unsafe { COUNTER = ret + 1 };
-	ret
-}
-
 /// Registers a waker to be called at the next timeslice.
 pub fn register_next_timeslice_wakeup(waker: &Waker) {
 	imp::register_next_timeslice(waker);
@@ -79,7 +66,7 @@ impl Future for UntilNextTimeslice {
 #[must_use = "A future does nothing unless awaited."]
 pub struct UntilUptime {
 	deadline: NotNan<f64>,
-	id: u64,
+	id: imp::Id,
 }
 
 impl Future for UntilUptime {
@@ -89,6 +76,7 @@ impl Future for UntilUptime {
 		if computer::uptime() >= self.deadline {
 			Poll::Ready(())
 		} else {
+			#[allow(clippy::unit_arg)] // Sometimes Id is (), sometimes it isn’t.
 			imp::register_uptime(self.deadline, self.id, context.waker());
 			Poll::Pending
 		}
@@ -97,6 +85,7 @@ impl Future for UntilUptime {
 
 impl Drop for UntilUptime {
 	fn drop(&mut self) {
+		#[allow(clippy::unit_arg)] // Sometimes Id is (), sometimes it isn’t.
 		imp::unregister_uptime(self.deadline, self.id);
 	}
 }
@@ -125,7 +114,7 @@ pub fn for_uptime(duration: Duration) -> UntilUptime {
 pub fn until_uptime(deadline: NotNan<f64>) -> UntilUptime {
 	UntilUptime {
 		deadline,
-		id: alloc_id(),
+		id: imp::alloc_id(),
 	}
 }
 
@@ -187,6 +176,20 @@ mod imp {
 	use oc_wasm_safe::computer;
 	use ordered_float::NotNan;
 
+	/// The type of an ID number used in places where ID numbers are used to identify wakers.
+	pub type Id = u64;
+
+	/// Allocates a waker ID number.
+	pub fn alloc_id() -> Id {
+		static mut COUNTER: u64 = 0;
+		// OC-Wasm is single-threaded, so a second thread cannot touch COUNTER at the same time.
+		// This function is a leaf (it does not call any other functions), so the same thread also
+		// cannot touch COUNTER at the same time via reentrancy.
+		let ret = unsafe { COUNTER };
+		unsafe { COUNTER = ret + 1 };
+		ret
+	}
+
 	/// Returns the vector used to hold [`Wakers`](Waker)s that are waiting for the next timeslice.
 	///
 	/// # Safety
@@ -223,7 +226,7 @@ mod imp {
 	}
 
 	/// Registers the executing task to wake up at a particular deadline.
-	pub fn register_uptime(deadline: NotNan<f64>, id: u64, waker: &Waker) {
+	pub fn register_uptime(deadline: NotNan<f64>, id: Id, waker: &Waker) {
 		let waker = waker.clone();
 		// SAFETY: BTreeMap::insert() does not call deadline_map(), so a second reference is not
 		// created within this thread while the first reference exists.
@@ -231,7 +234,7 @@ mod imp {
 	}
 
 	/// Removes a registered wakeup.
-	pub fn unregister_uptime(deadline: NotNan<f64>, id: u64) {
+	pub fn unregister_uptime(deadline: NotNan<f64>, id: Id) {
 		// SAFETY: BTreeMap::remove() does not call deadline_map(), so a second reference is not
 		// created within this thread while the first reference exists.
 		let elt = unsafe { deadline_map() }.remove(&(deadline, id));
@@ -306,6 +309,8 @@ mod imp {
 	use oc_wasm_safe::computer;
 	use ordered_float::NotNan;
 
+	pub type Id = ();
+
 	/// Zero, as a `NotNan<f64>`.
 	const NOTNAN_ZERO: NotNan<f64> = unsafe {
 		// SAFETY: Zero is not NaN.
@@ -320,19 +325,21 @@ mod imp {
 
 	static mut EARLIEST_DEADLINE: NotNan<f64> = NOTNAN_INFINITY;
 
+	pub fn alloc_id() -> Id {}
+
 	pub fn register_next_timeslice(_: &Waker) {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
 		unsafe { EARLIEST_DEADLINE = NOTNAN_ZERO };
 	}
 
-	pub fn register_uptime(deadline: NotNan<f64>, _: u64, _: &Waker) {
+	pub fn register_uptime(deadline: NotNan<f64>, _: Id, _: &Waker) {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
 		unsafe { EARLIEST_DEADLINE = min(EARLIEST_DEADLINE, deadline) };
 	}
 
-	pub fn unregister_uptime(_: NotNan<f64>, _: u64) {
+	pub fn unregister_uptime(_: NotNan<f64>, _: Id) {
 		// We do not have enough information to unregister. Doing nothing is harmless; it may just
 		// result in tasks being woken before they strictly need to be.
 	}
