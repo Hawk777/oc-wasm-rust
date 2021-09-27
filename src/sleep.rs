@@ -190,7 +190,7 @@ mod imp {
 		ret
 	}
 
-	/// Returns the vector used to hold [`Wakers`](Waker)s that are waiting for the next timeslice.
+	/// Returns the vector used to hold [`Waker`](Waker)s that are waiting for the next timeslice.
 	///
 	/// # Safety
 	/// This function returns a mutable reference to the same object on every call. The caller must
@@ -200,7 +200,7 @@ mod imp {
 		&mut QUEUE
 	}
 
-	/// Returns the map used to hold [`Wakers`](Waker)s that are waiting for specific deadlines in
+	/// Returns the map used to hold [`Waker`](Waker)s that are waiting for specific deadlines in
 	/// wakeup order.
 	///
 	/// # Safety
