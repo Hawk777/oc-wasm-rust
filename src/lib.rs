@@ -160,6 +160,7 @@ pub mod error;
 pub mod filesystem;
 pub mod gpu;
 pub mod inventory;
+pub mod keyboard;
 pub mod redstone;
 pub mod robot;
 pub mod screen;
