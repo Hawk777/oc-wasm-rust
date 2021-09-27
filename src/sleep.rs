@@ -247,10 +247,10 @@ mod imp {
 
 	/// Returns the first key in the deadline map, if any.
 	fn first_deadline_key() -> Option<(NotNan<f64>, u64)> {
-		// SAFETY: Neither BTreeMap::iter() nor btree_map::Iter::next() nor Option::map() calls
+		// SAFETY: Neither BTreeMap::keys() nor btree_map::Keys::next() nor Option::copied() calls
 		// deadline_map(), so a second reference is not created within this thread while the first
 		// reference exists.
-		unsafe { deadline_map() }.iter().next().map(|elt| *elt.0)
+		unsafe { deadline_map() }.keys().next().copied()
 	}
 
 	/// Returns how long to sleep until the earliest deadline.
