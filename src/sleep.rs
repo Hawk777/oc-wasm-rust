@@ -208,7 +208,8 @@ mod imp {
 	/// not call `deadline_map` a second time before it has dropped the first reference.
 	unsafe fn deadline_map() -> &'static mut BTreeMap<(NotNan<f64>, u64), Waker> {
 		static mut MAP: Option<BTreeMap<(NotNan<f64>, u64), Waker>> = None;
-		// SAFETY: BTreeMap::new() does not call sleepers(), so a second mutable reference to MAP
+		// SAFETY: BTreeMap::new() does not call register_uptime(), unregister_uptime(),
+		// first_deadline_key(), or pop_deadline_passed(), so a second mutable reference to MAP
 		// cannot be created via reentrancy. OC-Wasm is single-threaded, so a second reference to
 		// MAP cannot be created by another thread. The MAP variable is local to this function, so
 		// a second mutable reference cannot be created by other code accessing it directly. The
