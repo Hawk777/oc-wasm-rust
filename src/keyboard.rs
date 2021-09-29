@@ -31,8 +31,8 @@ pub struct BasicKeySignal {
 	/// key event is a composed character; in this case, the individual keystrokes are not
 	/// reported, but the composed character is reported as a character without associated keycode.
 	/// Another example is a Windows key (aka super key) or Menu key, both of which (under some
-	/// operating systems at least) send key signals with neither [`character`](character) nor
-	/// `keycode` filled in.
+	/// operating systems at least) send key signals with neither `character` nor `keycode` filled
+	/// in.
 	pub keycode: Option<NonZeroU32>,
 }
 
@@ -69,8 +69,8 @@ pub struct KeySignal<'buffer> {
 	/// non-keycode-producing key signal is a composed character; in this case, the individual
 	/// keystrokes are not reported, but the composed character is reported as a character without
 	/// associated keycode. Another example is a Windows key (aka super key) or Menu key, both of
-	/// which (under some operating systems at least) send key signals with neither
-	/// [`character`](character) nor `keycode` filled in.
+	/// which (under some operating systems at least) send key signals with neither `character` nor
+	/// `keycode` filled in.
 	#[b(2)]
 	#[cbor(decode_with = "KeySignal::decode_keycode")]
 	pub keycode: Option<NonZeroU32>,
