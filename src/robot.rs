@@ -559,6 +559,34 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		}
 	}
 
+	/// Checks what’s present in a specified direction.
+	///
+	/// The `side` parameter indicates which space, relative to the robot’s current facing
+	/// direction, to scan.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
+	///   inaccessible, or is not a robot.
+	pub async fn detect(&mut self, side: ActionSide) -> Result<BlockContent, Error> {
+		let ret: TwoValues<bool, &str> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"detect",
+			Some(&OneValue(u8::from(side))),
+		)
+		.await?;
+		match ret.1 {
+			"entity" => Ok(BlockContent::Entity),
+			"air" => Ok(BlockContent::Air),
+			"liquid" => Ok(BlockContent::Liquid),
+			"replaceable" => Ok(BlockContent::Replaceable),
+			"passable" => Ok(BlockContent::Passable),
+			"solid" => Ok(BlockContent::Solid),
+			_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Other)),
+		}
+	}
+
 	/// Returns the size of the robot’s inventory, in slots.
 	///
 	/// # Errors
