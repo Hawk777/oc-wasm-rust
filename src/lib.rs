@@ -7,12 +7,12 @@
 //! between API calls to reduce heap allocations. In some cases the return value of an API may
 //! borrow from the scratch buffer.
 //!
-//! = Important =
+//! # Important
 //! You *must* depend on [`oc-wasm-futures`](https://gitlab.com/Hawk777/oc-wasm-futures) with the
 //! `proper-waker` feature in your own application if your chosen executor requires the
 //! `proper-waker` feature.
 //!
-//! = Example =
+//! # Example
 //! ```
 //! extern crate alloc;
 //! use alloc::boxed::Box;
