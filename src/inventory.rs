@@ -411,6 +411,34 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
 	}
 
+	/// Moves fluids between two tanks.
+	///
+	/// The `count` value indicates the maximum number of millibuckets to move. The number of
+	/// millibuckets moved is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a transposer.
+	/// * [`Failed`](Error::Failed) is returned if there is not an accessible fluid tank on one of
+	///   the specified sides, or if there is not enough energy to perform the operation.
+	pub async fn transfer_fluid(
+		&mut self,
+		source: AbsoluteSide,
+		sink: AbsoluteSide,
+		count: u32,
+	) -> Result<u32, Error> {
+		let ret: Result<NullAndStringOr<'_, TwoValues<bool, u32>>, oc_wasm_safe::error::Error> =
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"transferFluid",
+				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
+			)
+			.await;
+		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
+	}
+
 	/// Returns the amount of fluid in a tank, in millibuckets.
 	///
 	/// The `tank` parameter ranges from 1 to the number of tanks in the target block.
@@ -516,34 +544,6 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		)
 		.await?;
 		Ok(ret.into_result()?.0 .0)
-	}
-
-	/// Moves fluids between two tanks.
-	///
-	/// The `count` value indicates the maximum number of millibuckets to move. The number of
-	/// millibuckets moved is returned.
-	///
-	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a transposer.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible fluid tank on one of
-	///   the specified sides, or if there is not enough energy to perform the operation.
-	pub async fn transfer_fluid(
-		&mut self,
-		source: AbsoluteSide,
-		sink: AbsoluteSide,
-		count: u32,
-	) -> Result<u32, Error> {
-		let ret: Result<NullAndStringOr<'_, TwoValues<bool, u32>>, oc_wasm_safe::error::Error> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				"transferFluid",
-				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
-			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
 	}
 
 	/// Makes a method call that accepts one or more slot parameters and converts a
