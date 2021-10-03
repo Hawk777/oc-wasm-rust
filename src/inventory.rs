@@ -514,9 +514,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		self,
 		side: AbsoluteSide,
 		tank: NonZeroU32,
-	) -> Result<Option<Fluid<'buffer>>, Error> {
+	) -> Result<Option<FluidInTank<'buffer>>, Error> {
 		let ret: Result<
-			NullAndStringOr<'_, OneValue<OptionFluid<'buffer>>>,
+			NullAndStringOr<'_, OneValue<OptionFluidInTank<'buffer>>>,
 			oc_wasm_safe::error::Error,
 		> = component_method(
 			self.invoker,
@@ -543,7 +543,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	pub async fn get_fluids_in_tanks(
 		self,
 		side: AbsoluteSide,
-	) -> Result<Vec<Option<Fluid<'buffer>>>, Error> {
+	) -> Result<Vec<Option<FluidInTank<'buffer>>>, Error> {
 		let ret: NullAndStringOr<'_, OneValue<GetFluidsInTanksResult<'buffer>>> = component_method(
 			self.invoker,
 			self.buffer,
@@ -902,7 +902,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Fluid<'buffer> {
+pub struct FluidInTank<'buffer> {
 	/// The internal (Minecraft system) name of the item.
 	///
 	/// For example, this might be `water`.
@@ -923,7 +923,7 @@ pub struct Fluid<'buffer> {
 	pub has_tag: bool,
 }
 
-impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
+impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
@@ -967,16 +967,16 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 
 /// Information about a fluid in a tank which may or may not exist.
 ///
-/// This type exists, rather than just using `Option<Fluid>` directly, because `Option` has a
+/// This type exists, rather than just using `Option<FluidInTank>` directly, because `Option` has a
 /// blanket `Decode` implementation, and we need a different implementation which also maps a
 /// non-null map containing a skeleton subset of keys to `None`.
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct OptionFluid<'buffer>(Option<Fluid<'buffer>>);
+struct OptionFluidInTank<'buffer>(Option<FluidInTank<'buffer>>);
 
-impl<'buffer> Decode<'buffer> for OptionFluid<'buffer> {
+impl<'buffer> Decode<'buffer> for OptionFluidInTank<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
 		if d.datatype()? == minicbor::data::Type::Null {
 			// Null is not used by OpenComputers AFAIK, but for future-proofing should probably map
@@ -1021,14 +1021,14 @@ impl<'buffer> Decode<'buffer> for OptionFluid<'buffer> {
 	}
 }
 
-/// A vector of `Option<Fluid>` objects that is decoded from a CBOR array.
+/// A vector of `Option<FluidInTank>` objects that is decoded from a CBOR array.
 ///
-/// Each element is decoded as an `OptionFluid` rather than an `Option<Fluid>`.
+/// Each element is decoded as an `OptionFluidInTank` rather than an `Option<FluidInTank>`.
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the objects
 /// refer.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct GetFluidsInTanksResult<'buffer>(Vec<Option<Fluid<'buffer>>>);
+struct GetFluidsInTanksResult<'buffer>(Vec<Option<FluidInTank<'buffer>>>);
 
 impl<'buffer> Decode<'buffer> for GetFluidsInTanksResult<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
@@ -1038,7 +1038,7 @@ impl<'buffer> Decode<'buffer> for GetFluidsInTanksResult<'buffer> {
 		let len = len.ok_or(minicbor::decode::Error::Message(""))? as usize;
 		let mut ret = Vec::with_capacity(len);
 		for _ in 0..len {
-			ret.push(d.decode::<OptionFluid<'buffer>>()?.0);
+			ret.push(d.decode::<OptionFluidInTank<'buffer>>()?.0);
 		}
 		Ok(Self(ret))
 	}
