@@ -6,7 +6,7 @@
 //! are not supported), and database interaction APIs are not supported. They may be added in a
 //! future version.
 
-use crate::common::AbsoluteSide;
+use crate::common::Side;
 use crate::error::Error;
 use crate::helpers::{
 	FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues, TwoValues,
@@ -80,6 +80,11 @@ impl Controller {
 /// dropped to return the borrow of the invoker and buffer to the caller so they can be reused for
 /// other purposes.
 ///
+/// Where a function is declared as taking [`impl Side`](Side), an
+/// [`AbsoluteSide`](super::common::AbsoluteSide) must be passed if operating on a transposer or an
+/// upgrade module installed in an adapter, while a [`RelativeSide`](super::common::RelativeSide)
+/// must be passed if operating on an upgrade module installed in a robot or drone.
+///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer.
 pub struct Locked<'invoker, 'buffer> {
@@ -103,13 +108,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   neither a transposer nor an inventory controller upgrade.
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
 	///   specified side.
-	pub async fn get_inventory_size(&mut self, side: AbsoluteSide) -> Result<u32, Error> {
+	pub async fn get_inventory_size(&mut self, side: impl Side) -> Result<u32, Error> {
+		let side: u8 = side.into();
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getInventorySize",
-			Some(&OneValue(u8::from(side))),
+			Some(&OneValue(side)),
 		)
 		.await?;
 		Ok(ret.into_result()?.0)
@@ -126,11 +132,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   specified side, or if the requested slot number is greater than the inventory size.
 	pub async fn get_slot_stack_size(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<u32, Error> {
+		let side: u8 = side.into();
 		let ret: OneValue<_> = self
-			.call_check_invalid_slots("getSlotStackSize", &TwoValues(u8::from(side), slot))
+			.call_check_invalid_slots("getSlotStackSize", &TwoValues(side, slot))
 			.await?;
 		Ok(ret.0)
 	}
@@ -147,11 +154,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   specified side, or if the requested slot number is greater than the inventory size.
 	pub async fn get_slot_max_stack_size(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<Option<NonZeroU32>, Error> {
+		let side: u8 = side.into();
 		let ret: OneValue<_> = self
-			.call_check_invalid_slots("getSlotMaxStackSize", &TwoValues(u8::from(side), slot))
+			.call_check_invalid_slots("getSlotMaxStackSize", &TwoValues(side, slot))
 			.await?;
 		Ok(NonZeroU32::new(ret.0))
 	}
@@ -173,15 +181,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   size.
 	pub async fn compare_stacks(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		slot_a: NonZeroU32,
 		slot_b: NonZeroU32,
 		check_nbt: bool,
 	) -> Result<bool, Error> {
+		let side: u8 = side.into();
 		let ret: OneValue<_> = self
 			.call_check_invalid_slots(
 				"compareStacks",
-				&FourValues(u8::from(side), slot_a, slot_b, check_nbt),
+				&FourValues(side, slot_a, slot_b, check_nbt),
 			)
 			.await?;
 		Ok(ret.0)
@@ -204,15 +213,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   size.
 	pub async fn are_stacks_equivalent(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		slot_a: NonZeroU32,
 		slot_b: NonZeroU32,
 	) -> Result<bool, Error> {
+		let side: u8 = side.into();
 		let ret: OneValue<_> = self
-			.call_check_invalid_slots(
-				"areStacksEquivalent",
-				&ThreeValues(u8::from(side), slot_a, slot_b),
-			)
+			.call_check_invalid_slots("areStacksEquivalent", &ThreeValues(side, slot_a, slot_b))
 			.await?;
 		Ok(ret.0)
 	}
@@ -233,16 +240,17 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   reading full item information is disabled in the configuration file.
 	pub async fn get_stack_in_slot(
 		self,
-		side: AbsoluteSide,
+		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
+		let side: u8 = side.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getStackInSlot",
-				Some(&TwoValues(u8::from(side), slot)),
+				Some(&TwoValues(side, slot)),
 			)
 			.await;
 		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
@@ -256,13 +264,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
 	///   specified side, or if reading full item information is disabled in the configuration
 	///   file.
-	pub async fn get_all_stacks(&mut self, side: AbsoluteSide) -> Result<Snapshot, Error> {
+	pub async fn get_all_stacks(&mut self, side: impl Side) -> Result<Snapshot, Error> {
+		let side: u8 = side.into();
 		let ret: NullAndStringOr<'_, OneValue<descriptor::Decoded>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getAllStacks",
-			Some(&OneValue(u8::from(side))),
+			Some(&OneValue(side)),
 		)
 		.await?;
 		let descriptor = ret.into_result()?.0;
@@ -285,13 +294,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
 	///   specified side, or if reading full item information is disabled in the configuration
 	///   file.
-	pub async fn get_inventory_name(self, side: AbsoluteSide) -> Result<&'buffer str, Error> {
+	pub async fn get_inventory_name(self, side: impl Side) -> Result<&'buffer str, Error> {
+		let side: u8 = side.into();
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getInventoryName",
-			Some(&OneValue(u8::from(side))),
+			Some(&OneValue(side)),
 		)
 		.await?;
 		Ok(ret.into_result()?.0)
@@ -317,19 +327,21 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   not a transposer.
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
 	///   the specified sides, or if there is not enough energy to perform the operation.
-	pub async fn transfer_item(
+	pub async fn transfer_item<SideType: Side>(
 		&mut self,
-		source: AbsoluteSide,
-		sink: AbsoluteSide,
+		source: SideType,
+		sink: SideType,
 		count: u32,
 	) -> Result<u32, Error> {
+		let source: u8 = source.into();
+		let sink: u8 = sink.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferItem",
-				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
+				Some(&ThreeValues(source, sink, count)),
 			)
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
@@ -353,25 +365,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
 	///   the specified sides, if the requested slot number is greater than the inventory size, or
 	///   if there is not enough energy to perform the operation.
-	pub async fn transfer_item_from_slot(
+	pub async fn transfer_item_from_slot<SideType: Side>(
 		&mut self,
-		source: AbsoluteSide,
-		sink: AbsoluteSide,
+		source: SideType,
+		sink: SideType,
 		count: u32,
 		source_slot: NonZeroU32,
 	) -> Result<u32, Error> {
+		let source: u8 = source.into();
+		let sink: u8 = sink.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferItem",
-				Some(&FourValues(
-					u8::from(source),
-					u8::from(sink),
-					count,
-					source_slot.get(),
-				)),
+				Some(&FourValues(source, sink, count, source_slot.get())),
 			)
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
@@ -392,14 +401,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
 	///   the specified sides, if a requested slot number is greater than the corresponding
 	///   inventory size, or if there is not enough energy to perform the operation.
-	pub async fn transfer_item_from_slot_to_slot(
+	pub async fn transfer_item_from_slot_to_slot<SideType: Side>(
 		&mut self,
-		source: AbsoluteSide,
-		sink: AbsoluteSide,
+		source: SideType,
+		sink: SideType,
 		count: u32,
 		source_slot: NonZeroU32,
 		sink_slot: NonZeroU32,
 	) -> Result<u32, Error> {
+		let source: u8 = source.into();
+		let sink: u8 = sink.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
@@ -407,8 +418,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				&self.address,
 				"transferItem",
 				Some(&FiveValues(
-					u8::from(source),
-					u8::from(sink),
+					source,
+					sink,
 					count,
 					source_slot.get(),
 					sink_slot.get(),
@@ -428,19 +439,21 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   not a transposer.
 	/// * [`Failed`](Error::Failed) is returned if there is not an accessible fluid tank on one of
 	///   the specified sides, or if there is not enough energy to perform the operation.
-	pub async fn transfer_fluid(
+	pub async fn transfer_fluid<SideType: Side>(
 		&mut self,
-		source: AbsoluteSide,
-		sink: AbsoluteSide,
+		source: SideType,
+		sink: SideType,
 		count: u32,
 	) -> Result<u32, Error> {
+		let source: u8 = source.into();
+		let sink: u8 = sink.into();
 		let ret: Result<NullAndStringOr<'_, TwoValues<bool, u32>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferFluid",
-				Some(&ThreeValues(u8::from(source), u8::from(sink), count)),
+				Some(&ThreeValues(source, sink, count)),
 			)
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
@@ -459,16 +472,17 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   side or if the requested tank number is greater than the number of tanks.
 	pub async fn get_tank_level(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
+		let side: u8 = side.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankLevel",
-				Some(&TwoValues(u8::from(side), tank.get())),
+				Some(&TwoValues(side, tank.get())),
 			)
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
@@ -485,16 +499,17 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   side or if the requested tank number is greater than the number of tanks.
 	pub async fn get_tank_capacity(
 		&mut self,
-		side: AbsoluteSide,
+		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
+		let side: u8 = side.into();
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankCapacity",
-				Some(&TwoValues(u8::from(side), tank.get())),
+				Some(&TwoValues(side, tank.get())),
 			)
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
@@ -512,9 +527,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   full item information is disabled in the configuration file.
 	pub async fn get_fluid_in_tank(
 		self,
-		side: AbsoluteSide,
+		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<Option<FluidInTank<'buffer>>, Error> {
+		let side: u8 = side.into();
 		let ret: Result<
 			NullAndStringOr<'_, OneValue<OptionFluidInTank<'buffer>>>,
 			oc_wasm_safe::error::Error,
@@ -523,7 +539,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			self.buffer,
 			&self.address,
 			"getFluidInTank",
-			Some(&TwoValues(u8::from(side), tank.get())),
+			Some(&TwoValues(side, tank.get())),
 		)
 		.await;
 		let ret = Self::unpack_bad_parameters_with_message(ret, "invalid tank")?;
@@ -542,14 +558,15 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   side or if reading full item information is disabled in the configuration file.
 	pub async fn get_fluids_in_tanks(
 		self,
-		side: AbsoluteSide,
+		side: impl Side,
 	) -> Result<Vec<Option<FluidInTank<'buffer>>>, Error> {
+		let side: u8 = side.into();
 		let ret: NullAndStringOr<'_, OneValue<GetFluidsInTanksResult<'buffer>>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getFluidInTank",
-			Some(&OneValue(u8::from(side))),
+			Some(&OneValue(side)),
 		)
 		.await?;
 		Ok(ret.into_result()?.0 .0)
