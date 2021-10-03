@@ -555,6 +555,262 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		Ok(ret.into_result()?.0 .0)
 	}
 
+	// TankInventoryControl
+
+	/// Returns the amount of fluid in a fluid container in the robot or drone’s internal
+	/// inventory.
+	///
+	/// The `slot` parameter ranges from 1 to the internal inventory size.
+	///
+	/// If the slot does not contain a fluid container (either because it contains a
+	/// non-fluid-container item or because it does not contain anything), `None` is returned. If
+	/// the slot contains an empty fluid container, `Some(0)` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
+	///   inventory size.
+	pub async fn get_tank_level_in_slot(&mut self, slot: NonZeroU32) -> Result<Option<u32>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getTankLevelInSlot",
+			Some(&OneValue(slot.get())),
+		)
+		.await?;
+		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
+		// an actual error.
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns the amount of fluid in the fluid container in the currently selected slot of the
+	/// robot or drone’s internal inventory.
+	///
+	/// If the slot does not contain a fluid container (either because it contains a
+	/// non-fluid-container item or because it does not contain anything), `None` is returned. If
+	/// the slot contains an empty fluid container, `Some(0)` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<Option<u32>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getTankLevelInSlot",
+			None,
+		)
+		.await?;
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns the total size of a fluid container in the robot or drone’s internal inventory.
+	///
+	/// The `slot` parameter ranges from 1 to the internal inventory size.
+	///
+	/// If the slot does not contain a fluid container (either because it contains a
+	/// non-fluid-container item or because it does not contain anything), `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
+	///   inventory size.
+	pub async fn get_tank_capacity_in_slot(
+		&mut self,
+		slot: NonZeroU32,
+	) -> Result<Option<u32>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getTankCapacityInSlot",
+			Some(&OneValue(slot.get())),
+		)
+		.await?;
+		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
+		// an actual error.
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns the total size of the fluid container in the currently selected slot of the robot
+	/// or drone’s internal inventory.
+	///
+	/// If the slot does not contain a fluid container (either because it contains a
+	/// non-fluid-container item or because it does not contain anything), `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<Option<u32>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getTankCapacityInSlot",
+			None,
+		)
+		.await?;
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns information about the fluid in a fluid container in the robot or drone’s internal
+	/// inventory.
+	///
+	/// The `slot` parameter ranges from 1 to the internal inventory size.
+	///
+	/// If the slot does not contain fluid (either because it contains a non-fluid-container item,
+	/// because it does not contain anything, or because it contains a fluid container item without
+	/// any fluid), `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
+	///   inventory size.
+	pub async fn get_fluid_in_tank_in_slot(
+		self,
+		slot: NonZeroU32,
+	) -> Result<Option<Fluid<'buffer>>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getFluidInTankInSlot",
+			Some(&OneValue(slot.get())),
+		)
+		.await?;
+		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
+		// an actual error. Empty container as returned as (nil) without a string.
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(n.0),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns information about the fluid in the fluid container in the selected slot of the
+	/// robot or drone’s internal inventory.
+	///
+	/// If the slot does not contain fluid (either because it contains a non-fluid-container item,
+	/// because it does not contain anything, or because it contains a fluid container item without
+	/// any fluid), `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	pub async fn get_fluid_in_tank_in_selected_slot(self) -> Result<Option<Fluid<'buffer>>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getFluidInTankInSlot",
+			None,
+		)
+		.await?;
+		match ret {
+			NullAndStringOr::Ok(n) => Ok(n.0),
+			NullAndStringOr::Err(_) => Ok(None),
+		}
+	}
+
+	/// Returns information about the fluid in the robot or drone’s specified internal tank.
+	///
+	/// If the tank is empty, `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the specified tank number is greater than the
+	///   number of internal tanks in the robot or drone.
+	pub async fn get_fluid_in_internal_tank(
+		self,
+		tank: NonZeroU32,
+	) -> Result<Option<Fluid<'buffer>>, Error> {
+		Ok(component_method::<_, OneValue<_>>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getFluidInInternalTank",
+			Some(&OneValue(tank.get())),
+		)
+		.await?
+		.0)
+	}
+
+	/// Returns information about the fluid in the robot or drone’s currently selected internal
+	/// tank.
+	///
+	/// If the tank is empty, `None` is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	pub async fn get_fluid_in_selected_internal_tank(
+		self,
+	) -> Result<Option<Fluid<'buffer>>, Error> {
+		Ok(component_method::<(), OneValue<_>>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getFluidInInternalTank",
+			None,
+		)
+		.await?
+		.0)
+	}
+
+	/// Moves fluid from a fluid container in the robot or drone’s currently selected inventory
+	/// slot into the robot or drone’s currently selected internal tank.
+	///
+	/// On success, the amount of fluid moved is returned. For certain types of source containers,
+	/// this may be larger than `amount`.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
+	///   selected internal tank is full, the selected item is not a container, the source
+	///   container is empty, the internal tank and source container contain different types of
+	///   fluid, or the source container cannot be partly drained (e.g. a bucket) and the complete
+	///   amount cannot be moved (either because `amount` is too small or because there is not
+	///   enough space in the destination tank).
+	pub async fn drain(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
+		self.drain_or_fill(amount, "drain").await
+	}
+
+	/// Moves fluid from the robot or drone’s currently selected internal tank into a fluid
+	/// container in the robot or drone’s currently selected inventory slot.
+	///
+	/// On success, the amount of fluid moved is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
+	///   selected internal tank is empty, the selected item is not a container, the destination
+	///   container is full, the internal tank and destination container contain different types of
+	///   fluid, or the destination container cannot be partly filled (e.g. a bucket) and the
+	///   complete amount cannot be moved (either because `amount` is too small or because there is
+	///   not enough fluid in the source tank).
+	pub async fn fill(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
+		self.drain_or_fill(amount, "fill").await
+	}
+
 	/// Makes a method call that accepts one or more slot parameters and converts a
 	/// [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) error into a failure due to
 	/// invalid slot number.
@@ -597,6 +853,29 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Err(Error::Failed(bad_parameters_message.to_owned()))
 			}
 			Err(e) => Err(e.into()),
+		}
+	}
+
+	/// Implements the `drain` and `fill` functions.
+	///
+	/// On success, the amount of fluid moved is returned.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the operation failed.
+	async fn drain_or_fill(&mut self, amount: NonZeroU32, method: &str) -> Result<u32, Error> {
+		let ret: NullAndStringOr<'_, TwoValues<bool, u32>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			method,
+			Some(&OneValue(amount.get())),
+		)
+		.await?;
+		match ret {
+			NullAndStringOr::Ok(x) => Ok(x.1),
+			NullAndStringOr::Err(e) => Err(Error::Failed(e.to_owned())),
 		}
 	}
 }
@@ -962,6 +1241,77 @@ impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 			}
 		}
 		Err(minicbor::decode::Error::Message(""))
+	}
+}
+
+/// Information about a fluid.
+///
+/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
+/// refers.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Fluid<'buffer> {
+	/// The internal (Minecraft system) name of the item.
+	///
+	/// For example, this might be `water`.
+	pub name: &'buffer str,
+
+	/// The human-readable name of the item.
+	///
+	/// For example, this might be `Water`.
+	pub label: &'buffer str,
+
+	/// The number of millibuckets of fluid in the container.
+	pub amount: u32,
+
+	/// Whether the fluid has extra NBT data attached.
+	pub has_tag: bool,
+}
+
+impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+		// The CBOR fits in memory, so it must be <2³² elements.
+		#[allow(clippy::cast_possible_truncation)]
+		let len = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let mut name: Option<_> = None;
+		let mut label: Option<_> = None;
+		let mut amount: Option<_> = None;
+		let mut has_tag: Option<_> = None;
+		for _ in 0..len {
+			let key = d.str()?;
+			match key {
+				"name" => name = Some(d.str()?),
+				"label" => label = Some(d.str()?),
+				"amount" => amount = Some(d.u32()?),
+				"hasTag" => has_tag = Some(d.bool()?),
+				_ => return Err(minicbor::decode::Error::Message("")),
+			}
+		}
+		if let Some(name) = name {
+			if let Some(label) = label {
+				if let Some(amount) = amount {
+					if let Some(has_tag) = has_tag {
+						return Ok(Self {
+							name,
+							label,
+							amount,
+							has_tag,
+						});
+					}
+				}
+			}
+		}
+		Err(minicbor::decode::Error::Message(""))
+	}
+}
+
+impl<'buffer> From<FluidInTank<'buffer>> for Fluid<'buffer> {
+	fn from(src: FluidInTank<'buffer>) -> Self {
+		Self {
+			name: src.name,
+			label: src.label,
+			amount: src.amount,
+			has_tag: src.has_tag,
+		}
 	}
 }
 
