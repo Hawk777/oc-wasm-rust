@@ -235,7 +235,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		self,
 		side: AbsoluteSide,
 		slot: NonZeroU32,
-	) -> Result<ItemStack<'buffer>, Error> {
+	) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
 			component_method(
 				self.invoker,
