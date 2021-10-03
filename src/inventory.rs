@@ -18,12 +18,15 @@ use minicbor::{Decode, Decoder, Encode};
 use oc_wasm_futures::invoke::{component_method, value_method};
 use oc_wasm_safe::{component::Invoker, descriptor, Address};
 
-/// The type name for inventory controller components, which can read solid inventory contents but
-/// not move items around nor do anything with fluids.
+/// The type name for inventory controller components, which can read solid inventory contents and
+/// move items around using an internal inventory (for robots and drones only, not adapters), but
+/// cannot operate on fluids.
 pub const INVENTORY_CONTROLLER_TYPE: &str = "inventory_controller";
 
-/// The type name for tank controller components, which can read fluid tank contents but not move
-/// fluids around nor do anything with items.
+/// The type name for tank controller components, which can read fluid tank contents and move
+/// fluids around using internal tanks (for robots and drones only, not adapters), but cannot
+/// operate on solid items other than moving fluid into and out of containers in the internal
+/// inventory (for robots and drones only, not adapters).
 pub const TANK_CONTROLLER_TYPE: &str = "tank_controller";
 
 /// The type name for transposer components, which can read both solid inventory and fluid tank
