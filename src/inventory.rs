@@ -828,6 +828,88 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		self.drain_or_fill(amount, "fill").await
 	}
 
+	// InventoryAnalytics
+
+	/// Returns the item stack in a robot or drone’s internal inventory slot.
+	///
+	/// The `slot` parameter ranges from 1 to the inventory size. If the slot does not contain any
+	/// items, `None` is returned.
+	///
+	/// The strings in the returned item stack point into, and therefore retain ownership of, the
+	/// scratch buffer. Consequently, the `Locked` is consumed and cannot be reused.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not an inventory controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
+	///   inventory size, or if reading full item information is disabled in the configuration
+	///   file.
+	pub async fn get_stack_in_internal_slot(
+		self,
+		slot: NonZeroU32,
+	) -> Result<Option<ItemStack<'buffer>>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getStackInInternalSlot",
+			Some(&OneValue(slot)),
+		)
+		.await?;
+		Ok(ret.into_result()?.0)
+	}
+
+	/// Returns the item stack in the robot or drone’s currently selected internal inventory slot.
+	///
+	/// The strings in the returned item stack point into, and therefore retain ownership of, the
+	/// scratch buffer. Consequently, the `Locked` is consumed and cannot be reused.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not an inventory controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if reading full item information is disabled in the
+	///   configuration file.
+	pub async fn get_stack_in_selected_internal_slot(
+		self,
+	) -> Result<Option<ItemStack<'buffer>>, Error> {
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getStackInInternalSlot",
+			None,
+		)
+		.await?;
+		Ok(ret.into_result()?.0)
+	}
+
+	/// Checks whether a robot or drone’s internal inventory slot contains an
+	/// ore-dictionary-equivalent item to the currently selected internal inventory slot.
+	///
+	/// The `slot` parameter ranges from 1 to the inventory size.
+	///
+	/// Two empty slots are considered equivalent. An empty slot and a populated slot are
+	/// considered non-equivalent. A slot is considered equivalent to itself. Otherwise, two slots
+	/// are considered equivalent if and only if the items in both slots have at least one ore
+	/// dictionary “ore ID” entry in common.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   neither a transposer nor an inventory controller upgrade.
+	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
+	///   inventory size.
+	pub async fn is_equivalent_to(&mut self, slot: NonZeroU32) -> Result<bool, Error> {
+		Ok(component_method::<_, OneValue<_>>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"isEquivalentTo",
+			Some(&OneValue(slot.get())),
+		)
+		.await?
+		.0)
+	}
+
 	/// Makes a method call that accepts one or more slot parameters and converts a
 	/// [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) error into a failure due to
 	/// invalid slot number.
