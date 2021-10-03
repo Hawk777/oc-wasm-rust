@@ -91,6 +91,8 @@ pub struct Locked<'invoker, 'buffer> {
 }
 
 impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+	// WorldInventoryAnalytics
+
 	/// Returns the number of slots in an inventory.
 	///
 	/// # Errors
@@ -292,6 +294,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		Ok(ret.into_result()?.0)
 	}
 
+	// InventoryTransfer
+
 	/// Moves items between two inventories.
 	///
 	/// The `count` value indicates the maximum number of items to move. It is clamped to 64; even
@@ -438,6 +442,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			.await;
 		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
 	}
+
+	// WorldTankAnalytics
 
 	/// Returns the amount of fluid in a tank, in millibuckets.
 	///
