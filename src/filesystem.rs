@@ -596,9 +596,9 @@ impl WriteHandle {
 	}
 }
 
-/// A readable file handle on which methods can be invoked.
+/// A writeable file handle on which methods can be invoked.
 ///
-/// This type combines a readable file handle, an [`Invoker`](Invoker) that can be used to make
+/// This type combines a writeable file handle, an [`Invoker`](Invoker) that can be used to make
 /// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
 /// type can be created by calling [`WriteHandle::lock`](WriteHandle::lock), and it can be dropped
 /// to return the borrow of the invoker and buffer to the caller so they can be reused for other
