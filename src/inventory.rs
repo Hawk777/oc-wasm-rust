@@ -6,7 +6,7 @@
 //! are not supported), and database interaction APIs are not supported. They may be added in a
 //! future version.
 
-use crate::common::{Lockable, Side};
+use crate::common::{Lockable, RelativeSide, Side};
 use crate::error::Error;
 use crate::helpers::{
 	FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues, TwoValues,
@@ -17,6 +17,8 @@ use core::num::NonZeroU32;
 use minicbor::{Decode, Decoder, Encode};
 use oc_wasm_futures::invoke::{component_method, value_method};
 use oc_wasm_safe::{component::Invoker, descriptor, Address};
+
+pub use super::robot::ActionSide;
 
 /// The type name for inventory controller components, which can read solid inventory contents and
 /// move items around using an internal inventory (for robots and drones only, not adapters), but
@@ -903,6 +905,126 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		)
 		.await?
 		.0)
+	}
+
+	// InventoryWorldControlMk2
+
+	/// Drops items from the robot’s selected slot into a specific slot of an adjacent inventory.
+	///
+	/// Up to `count` items from the currently selected slot in the robot’s inventory are moved
+	/// into slot `slot` of the inventory on side `side`. The `face` parameter indicates which face
+	/// of the destination location to look for inventory slots.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not an inventory controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on
+	///   face `face` of the block on side `side`), if `slot` is greater than the number of slots
+	///   in the external inventory, if there are no items in the currently selected slot, or if
+	///   the destination slot is full or contains an item of a different type.
+	pub async fn drop_into_slot(
+		&mut self,
+		side: ActionSide,
+		slot: NonZeroU32,
+		count: u32,
+		face: Option<RelativeSide>,
+	) -> Result<(), Error> {
+		let side = u8::from(side);
+		let slot = slot.get();
+		let ret: NullAndStringOr<'_, OneValue<bool>> = if let Some(f) = face {
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"dropIntoSlot",
+				Some(&FourValues(side, slot, count, u8::from(f))),
+			)
+			.await
+		} else {
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"dropIntoSlot",
+				Some(&ThreeValues(side, slot, count)),
+			)
+			.await
+		}?;
+		if ret.into_result()?.0 {
+			Ok(())
+		} else {
+			Err(Error::Failed("drop failed".to_owned()))
+		}
+	}
+
+	/// Sucks up items from a specific slot in an adjacent inventory block into the robot’s
+	/// internal inventory.
+	///
+	/// Up to `count` items from the stack in slot `slot` in the inventory on side `side` are
+	/// inserted into the robot’s inventory. The `face` parameter indicates on which face of the
+	/// source location to look for inventory slots.
+	///
+	/// The sucked items are placed into the robot’s inventory, initially into the currently
+	/// selected slot, then into slots after it, then wrapping around to slots before it, as
+	/// necessary to hold all the sucked items. If there is not enough space to hold the items,
+	/// then the items that cannot be held are left behind in their original location.
+	///
+	/// On success, the number of items actually moved is returned, which may be less than `count`
+	/// if the source stack does not have that many items or if that many items do not fit into the
+	/// robot’s inventory, including zero if the source stack is empty or there is no space at all
+	/// in the robot.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
+	///   not an inventory controller upgrade installed in a robot or drone.
+	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on face
+	///   `face` of the block on side `side`), or if `slot` is greater than the number of slots in
+	///   the external inventory.
+	pub async fn suck_from_slot(
+		&mut self,
+		side: ActionSide,
+		slot: NonZeroU32,
+		count: u32,
+		face: Option<RelativeSide>,
+	) -> Result<u32, Error> {
+		struct FalseOrU32(u32);
+		impl Decode<'_> for FalseOrU32 {
+			fn decode(d: &mut Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
+				if d.datatype()? == minicbor::data::Type::Bool {
+					if d.bool()? {
+						Err(minicbor::decode::Error::Message(
+							"expected only false, not true",
+						))
+					} else {
+						Ok(Self(0))
+					}
+				} else {
+					Ok(Self(d.u32()?))
+				}
+			}
+		}
+		let side = u8::from(side);
+		let slot = slot.get();
+		let ret: NullAndStringOr<'_, OneValue<FalseOrU32>> = if let Some(f) = face {
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"suckFromSlot",
+				Some(&FourValues(side, slot, count, u8::from(f))),
+			)
+			.await
+		} else {
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"suckFromSlot",
+				Some(&ThreeValues(side, slot, count)),
+			)
+			.await
+		}?;
+		Ok(ret.into_result()?.0 .0)
 	}
 
 	/// Makes a method call that accepts one or more slot parameters and converts a
