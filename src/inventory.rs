@@ -983,7 +983,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ItemStack<'buffer> {
 	/// The internal (Minecraft system) name of the item.
 	///
@@ -1071,7 +1071,7 @@ impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct OptionItemStack<'buffer>(Option<ItemStack<'buffer>>);
 
 impl<'buffer> Decode<'buffer> for OptionItemStack<'buffer> {
@@ -1187,7 +1187,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 			None,
 		)
 		.await?;
-		if let Some(elt) = ret.get(0) {
+		if let Some(elt) = ret.into_iter().next() {
 			// OptionItemStack was returned, whether empty or nonempty → slot exists but might be
 			// empty.
 			Ok(elt.0)
@@ -1279,7 +1279,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct FluidInTank<'buffer> {
 	/// The internal (Minecraft system) name of the item.
 	///
@@ -1347,7 +1347,7 @@ impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Fluid<'buffer> {
 	/// The internal (Minecraft system) name of the item.
 	///
@@ -1422,7 +1422,7 @@ impl<'buffer> From<FluidInTank<'buffer>> for Fluid<'buffer> {
 ///
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct OptionFluidInTank<'buffer>(Option<FluidInTank<'buffer>>);
 
 impl<'buffer> Decode<'buffer> for OptionFluidInTank<'buffer> {
