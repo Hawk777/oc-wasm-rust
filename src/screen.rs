@@ -1,6 +1,6 @@
 //! Provides high-level access to the screen APIs.
 
-use crate::common::Dimension;
+use crate::common::{Dimension, Lockable};
 use crate::error::Error;
 use crate::helpers::{NullAndStringOr, OneValue, TwoValues};
 use alloc::vec::Vec;
@@ -30,13 +30,12 @@ impl Screen {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the screen so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'a>(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Locked<'a> {
+impl<'a> Lockable<'a, 'a> for Screen {
+	type Locked = Locked<'a>;
+
+	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,

@@ -6,7 +6,7 @@
 //! are not supported), and database interaction APIs are not supported. They may be added in a
 //! future version.
 
-use crate::common::Side;
+use crate::common::{Lockable, Side};
 use crate::error::Error;
 use crate::helpers::{
 	FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues, TwoValues,
@@ -53,17 +53,12 @@ impl Controller {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the controller so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'invoker, 'buffer>(
-		&self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Controller {
+	type Locked = Locked<'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -1126,17 +1121,10 @@ impl<'buffer> Decode<'buffer> for GetAllResult<'buffer> {
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Snapshot(pub descriptor::Owned);
 
-impl Snapshot {
-	/// Locks the snapshot so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`LockedSnapshot`](LockedSnapshot) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'handle, 'invoker, 'buffer>(
-		&'handle self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> LockedSnapshot<'handle, 'invoker, 'buffer> {
+impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle Snapshot {
+	type Locked = LockedSnapshot<'handle, 'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		use oc_wasm_safe::descriptor::AsDescriptor;
 		LockedSnapshot {
 			descriptor: self.0.as_descriptor(),
@@ -1150,7 +1138,7 @@ impl Snapshot {
 ///
 /// This type combines an inventory snapshot, an [`Invoker`](Invoker) that can be used to make
 /// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`Snapshot::lock`](Snapshot::lock), and it can be dropped to
+/// type can be created by calling [`Snapshot::lock`](Lockable::lock), and it can be dropped to
 /// return the borrow of the invoker and buffer to the caller so they can be reused for other
 /// purposes.
 ///

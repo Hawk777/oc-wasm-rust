@@ -1,5 +1,6 @@
 //! Provides high-level access to the filesystem APIs.
 
+use crate::common::Lockable;
 use crate::error::Error;
 use crate::helpers::{Ignore, OneOptionalValue, OneValue, TwoValues};
 use alloc::borrow::ToOwned;
@@ -31,17 +32,12 @@ impl Filesystem {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the filesystem so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'invoker, 'buffer>(
-		&self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Filesystem {
+	type Locked = Locked<'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -470,17 +466,10 @@ pub struct ReadHandle {
 	descriptor: descriptor::Owned,
 }
 
-impl ReadHandle {
-	/// Locks the handle so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`LockedReadHandle`](LockedReadHandle) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'handle, 'invoker, 'buffer>(
-		&'handle self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> LockedReadHandle<'handle, 'invoker, 'buffer> {
+impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle ReadHandle {
+	type Locked = LockedReadHandle<'handle, 'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		LockedReadHandle {
 			handle: self,
 			invoker,
@@ -493,7 +482,7 @@ impl ReadHandle {
 ///
 /// This type combines a readable file handle, an [`Invoker`](Invoker) that can be used to make
 /// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`ReadHandle::lock`](ReadHandle::lock), and it can be dropped to
+/// type can be created by calling [`ReadHandle::lock`](Lockable::lock), and it can be dropped to
 /// return the borrow of the invoker and buffer to the caller so they can be reused for other
 /// purposes.
 ///
@@ -577,17 +566,10 @@ pub struct WriteHandle {
 	descriptor: descriptor::Owned,
 }
 
-impl WriteHandle {
-	/// Locks the handle so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`LockedWriteHandle`](LockedWriteHandle) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'handle, 'invoker, 'buffer>(
-		&'handle self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> LockedWriteHandle<'handle, 'invoker, 'buffer> {
+impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle WriteHandle {
+	type Locked = LockedWriteHandle<'handle, 'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		LockedWriteHandle {
 			handle: self,
 			invoker,
@@ -600,8 +582,8 @@ impl WriteHandle {
 ///
 /// This type combines a writeable file handle, an [`Invoker`](Invoker) that can be used to make
 /// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`WriteHandle::lock`](WriteHandle::lock), and it can be dropped
-/// to return the borrow of the invoker and buffer to the caller so they can be reused for other
+/// type can be created by calling [`WriteHandle::lock`](Lockable::lock), and it can be dropped to
+/// return the borrow of the invoker and buffer to the caller so they can be reused for other
 /// purposes.
 ///
 /// The `'handle` lifetime is the lifetime of the original file handle. The `'invoker` lifetime is

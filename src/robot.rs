@@ -1,6 +1,6 @@
 //! Provides high-level access to the robot component APIs.
 
-use crate::common::{RelativeSide, Rgb, Side, TryFromIntError};
+use crate::common::{Lockable, RelativeSide, Rgb, Side, TryFromIntError};
 use crate::error::Error;
 use crate::helpers::{FourValues, NullAndStringOr, OneValue, ThreeValues, TwoValues};
 use alloc::{borrow::ToOwned, vec::Vec};
@@ -263,17 +263,12 @@ impl Robot {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the robot so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'invoker, 'buffer>(
-		&self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Robot {
+	type Locked = Locked<'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -853,8 +848,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// already present in the robot. Otherwise, the first populated inventory slot, or an
 	/// arbitrary itemstack entity, is selected.
 	///
-	/// On success, the number of items actually moved, which may be less than `count` if the
-	/// source stack does not have that many items or if that many items do not fit into the
+	/// On success, the number of items actually moved is returned, which may be less than `count`
+	/// if the source stack does not have that many items or if that many items do not fit into the
 	/// robot’s inventory, or may be more than `count` if the source is an itemstack entity because
 	/// `count` is ignored.
 	///

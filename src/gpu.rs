@@ -1,6 +1,6 @@
 //! Provides high-level access to the GPU APIs.
 
-use crate::common::{Dimension, Point, Rgb, Vector2};
+use crate::common::{Dimension, Lockable, Point, Rgb, Vector2};
 use crate::error::Error;
 use crate::helpers::{FiveValues, Ignore, NullAndStringOr, OneValue, TwoValues};
 use alloc::borrow::ToOwned;
@@ -33,13 +33,12 @@ impl Gpu {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the GPU so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'a>(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Locked<'a> {
+impl<'a> Lockable<'a, 'a> for Gpu {
+	type Locked = Locked<'a>;
+
+	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,

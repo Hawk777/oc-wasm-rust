@@ -1,5 +1,6 @@
 //! Provides high-level access to the EEPROM APIs.
 
+use crate::common::Lockable;
 use crate::error::Error;
 use crate::helpers::{Ignore, NullAndStringOr, OneValue};
 use alloc::borrow::ToOwned;
@@ -31,17 +32,12 @@ impl Eeprom {
 	pub fn address(&self) -> &Address {
 		&self.0
 	}
+}
 
-	/// Locks the EEPROM so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the [`Locked`](Locked) is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	pub fn lock<'invoker, 'buffer>(
-		&self,
-		invoker: &'invoker mut Invoker,
-		buffer: &'buffer mut Vec<u8>,
-	) -> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Eeprom {
+	type Locked = Locked<'invoker, 'buffer>;
+
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
