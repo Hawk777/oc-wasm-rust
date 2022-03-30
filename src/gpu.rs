@@ -620,7 +620,7 @@ impl<'a> Locked<'a> {
 	}
 }
 
-impl<'a> Debug for Locked<'a> {
+impl Debug for Locked<'_> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
 		Gpu::new(self.address).fmt(f)
 	}

@@ -145,7 +145,7 @@ pub struct ClipboardSignal<'buffer> {
 	pub player: Option<&'buffer str>,
 }
 
-impl<'buffer> ClipboardSignal<'buffer> {
+impl ClipboardSignal<'_> {
 	/// The name of the signal sent when text is pasted from the clipboard.
 	pub const SIGNAL: &'static str = "clipboard";
 }
