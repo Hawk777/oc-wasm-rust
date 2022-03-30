@@ -69,7 +69,6 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn is_on(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isOn", None)
@@ -106,7 +105,6 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_aspect_ratio(&mut self) -> Result<Dimension, Error> {
 		let ret: TwoValues<f64, f64> = component_method::<(), _>(
 			self.invoker,
@@ -131,7 +129,6 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
 	///   inaccessible, or is not a screen.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_keyboards(&mut self) -> Result<Vec<Address>, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,

@@ -92,7 +92,6 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getScreen", None)
@@ -106,7 +105,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_background(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getBackground").await
 	}
@@ -131,7 +129,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_foreground(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getForeground").await
 	}
@@ -157,7 +154,6 @@ impl<'a> Locked<'a> {
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the palette index is
 	///   out of range.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_palette_colour(&mut self, index: PaletteIndex) -> Result<Rgb, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, _> = component_method(
 			self.invoker,
@@ -227,7 +223,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "maxDepth", None)
@@ -242,7 +237,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getDepth", None)
@@ -278,7 +272,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn max_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("maxResolution").await
 	}
@@ -289,7 +282,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getResolution").await
 	}
@@ -313,7 +305,6 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get_viewport(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getViewport").await
 	}
@@ -338,7 +329,6 @@ impl<'a> Locked<'a> {
 	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound, the specified position is
 	///   outside the visible region of the screen, or the code unit at the specified position is a
 	///   surrogate.
-	#[must_use = "This function is only useful for its return value"]
 	pub async fn get(&mut self, point: Point) -> Result<CharacterCellContents, Error> {
 		type Return<'character> = FiveValues<&'character str, u32, u32, Option<u32>, Option<u32>>;
 		let ret: Result<NullAndStringOr<'_, Return<'_>>, _> = component_method(
