@@ -252,9 +252,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		Ok(ret.0)
 	}
 
-	/// Writes to the main storage area.
+	/// Writes to the volatile data area.
 	///
-	/// In an EEPROM used for booting, the volatile data area contains the BIOS code.
+	/// In an EEPROM used for booting, the volatile data area contains the UUID of the filesystem
+	/// to prefer booting from.
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
