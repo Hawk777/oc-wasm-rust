@@ -326,12 +326,16 @@ impl<'a> Locked<'a> {
 
 	/// Returns the character and colours at a specific character cell.
 	///
+	/// It is possible for a Java string to contain an unpaired UTF-16 surrogate half. It is
+	/// possible (in Lua, at least) to place such a byte sequence into a character cell in a
+	/// screen. Should this method be called on such a character cell, a replacement character is
+	/// silently returned instead.
+	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound, the specified position is
-	///   outside the visible region of the screen, or the code unit at the specified position is a
-	///   surrogate.
+	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or the specified position is
+	///   outside the visible region of the screen.
 	pub async fn get(&mut self, point: Point) -> Result<CharacterCellContents, Error> {
 		type Return<'character> = FiveValues<&'character str, u32, u32, Option<u32>, Option<u32>>;
 		let ret: Result<NullAndStringOr<'_, Return<'_>>, _> = component_method(
