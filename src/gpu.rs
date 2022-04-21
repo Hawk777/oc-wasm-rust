@@ -69,6 +69,9 @@ pub struct Locked<'a> {
 impl<'a> Locked<'a> {
 	/// Binds the GPU to a screen.
 	///
+	/// If `reset` is `true`, then the screen is reset to its maximum resolution and colour depth,
+	/// and its colours are set to white on black. The text content, however, is not cleared.
+	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
 	///   inaccessible, or is not a GPU.
