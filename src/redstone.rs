@@ -504,7 +504,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 /// [`Default`](Default), and any elements not included in the CBOR-encoded map will be returned at
 /// their default values.
 ///
-/// To be decoded, the element type must be an [`Option`](Option) and the type contained therein
+/// To be encoded, the element type must be an [`Option`](Option) and the type contained therein
 /// must implement [`Encode`](minicbor::Encode). `None` values are omitted from the map entirely,
 /// while `Some` values are encoded as their contents, keyed by array position.
 #[derive(Clone, Copy)]
