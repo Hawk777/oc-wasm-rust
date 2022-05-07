@@ -2,7 +2,7 @@
 
 use crate::common::Lockable;
 use crate::error::Error;
-use crate::helpers::{max_usize, Ignore, OneOptionalValue, OneValue, TwoValues};
+use crate::helpers::{max_usize, Ignore, OneValue, TwoValues};
 use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::component_method;
@@ -220,7 +220,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`FileNotFound`](Error::FileNotFound)
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
-		let ret: Result<OneOptionalValue<Vec<DirectoryEntry<'buffer>>>, _> = component_method(
+		let ret: Result<OneValue<Option<Vec<DirectoryEntry<'buffer>>>>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -229,8 +229,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		)
 		.await;
 		match ret {
-			Ok(OneOptionalValue(Some(listing))) => Ok(listing),
-			Ok(OneOptionalValue(None)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
+			Ok(OneValue(Some(listing))) => Ok(listing),
+			Ok(OneValue(None)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}

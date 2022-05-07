@@ -530,10 +530,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		sneak: bool,
 		duration: f64,
 	) -> Result<ActivateResult, Error> {
-		#[derive(Decode)]
-		#[cbor(array)]
-		struct ReturnType<'a>(#[b(0)] bool, #[b(1)] Option<&'a str>);
-		let ret: ReturnType<'_> = component_method(
+		let ret: TwoValues<bool, Option<&str>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
