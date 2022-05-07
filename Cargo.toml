@@ -13,7 +13,7 @@ resolver = "2"
 [dependencies.minicbor]
 default-features = false
 features = ["alloc"]
-version = "^0.9"
+version = "^0.15"
 
 [dependencies.oc-wasm-safe]
 default-features = false
