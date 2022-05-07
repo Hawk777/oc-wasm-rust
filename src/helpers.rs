@@ -1,8 +1,6 @@
 //! A collection of helper functions and types used by multiple modules in this crate but not
 //! exported for public use.
 
-use crate::error::Error;
-use alloc::borrow::ToOwned;
 use minicbor::data::Type;
 use minicbor::decode::Decoder;
 use minicbor::{Decode, Encode};
@@ -27,18 +25,9 @@ impl<'buffer> Decode<'buffer> for Ignore {
 /// The `'buffer` parameter is the lifetime of the buffer from which the error string is decoded.
 /// The `T` parameter is the type to decode if the call was successful.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum NullAndStringOr<'buffer, T: Decode<'buffer>> {
+pub enum NullAndStringOr<'buffer, T> {
 	Ok(T),
 	Err(&'buffer str),
-}
-
-impl<'buffer, T: Decode<'buffer>> NullAndStringOr<'buffer, T> {
-	pub fn into_result(self) -> Result<T, Error> {
-		match self {
-			Self::Ok(value) => Ok(value),
-			Self::Err(s) => Err(Error::Failed(s.to_owned())),
-		}
-	}
 }
 
 impl<'buffer, T: Decode<'buffer>> Decode<'buffer> for NullAndStringOr<'buffer, T> {
@@ -107,3 +96,21 @@ pub struct FiveValues<T, U, V, W, X>(
 	#[b(3)] pub W,
 	#[b(4)] pub X,
 );
+
+/// Returns the larger of two `usize` values in a `const` context.
+pub const fn max_usize(x: usize, y: usize) -> usize {
+	if x > y {
+		x
+	} else {
+		y
+	}
+}
+
+/// Returns the largest of a sequence of `usize` values in a `const` context.
+pub const fn max_of_usizes(x: &[usize]) -> usize {
+	if let Some((&first, rest)) = x.split_first() {
+		max_usize(first, max_of_usizes(rest))
+	} else {
+		0
+	}
+}

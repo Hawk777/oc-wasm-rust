@@ -74,8 +74,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// indices should be [relative sides](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_input(&mut self) -> Result<[u8; BLOCK_SIDES], Error> {
 		self.get_vanilla("getInput").await
 	}
@@ -87,8 +86,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// must be a [relative side](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		self.get_side_vanilla("getInput", side.into()).await
 	}
@@ -101,8 +99,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// array is itself an array indexed by colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_bundled_input(&mut self) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
 		self.get_bundled("getBundledInput").await
 	}
@@ -116,8 +113,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The returned array is indexed by colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_bundled_input(
 		&mut self,
 		side: impl Side,
@@ -132,8 +128,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// must be a [relative side](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_colour_bundled_input(
 		&mut self,
 		side: impl Side,
@@ -150,8 +145,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// indices should be [relative sides](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_output(&mut self) -> Result<[u8; BLOCK_SIDES], Error> {
 		self.get_vanilla("getOutput").await
 	}
@@ -163,8 +157,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// must be a [relative side](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_output(&mut self, side: impl Side) -> Result<u8, Error> {
 		self.get_side_vanilla("getOutput", side.into()).await
 	}
@@ -177,8 +170,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// array is itself an array indexed by colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_bundled_output(&mut self) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
 		self.get_bundled("getBundledOutput").await
 	}
@@ -192,8 +184,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The returned array is indexed by colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -208,8 +199,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// must be a [relative side](crate::common::RelativeSide).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_side_colour_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -230,8 +220,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The old signal levels, prior to modification, are returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_output(
 		&mut self,
 		levels: &[Option<u8>; BLOCK_SIDES],
@@ -256,8 +245,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The old signal level, prior to modification, is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_side_output(&mut self, side: impl Side, level: u8) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let ret: OneValue<_> = component_method(
@@ -281,8 +269,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// colour unmodified.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_bundled_output(
 		&mut self,
 		levels: &[[Option<u8>; COLOURS]; BLOCK_SIDES],
@@ -317,8 +304,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// `Some` with the new signal strength to emit, or `None` to leave that colour unmodified.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_side_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -345,8 +331,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The old signal level, prior to modification, is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_side_colour_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -376,8 +361,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// adjacent block. If the target block is not readable by a comparator, zero is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_comparator_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let ret: OneValue<_> = component_method(
@@ -398,8 +382,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// connected computers (in the case of a redstone block) are powered on if they are off.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_wake_threshold(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
@@ -421,8 +404,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The old wake threshold, prior to modification, is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the card or block does not exist, is
-	///   inaccessible, or is not a redstone component.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_wake_threshold(&mut self, threshold: u32) -> Result<u32, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,
@@ -517,7 +499,9 @@ impl<'buffer, T: Copy + Decode<'buffer> + Default, const LENGTH: usize> Decode<'
 		let mut ret = [T::default(); LENGTH];
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let length = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let length = d
+			.map()?
+			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		for _ in 0..length {
 			let key = d.u32()?;
 			ret[key as usize] = d.decode::<T>()?;

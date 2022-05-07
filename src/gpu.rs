@@ -3,12 +3,14 @@
 use crate::common::{Dimension, Lockable, Point, Rgb, Vector2};
 use crate::error::Error;
 use crate::helpers::{FiveValues, Ignore, NullAndStringOr, OneValue, TwoValues};
-use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter};
 use minicbor::Encode;
 use oc_wasm_futures::invoke::component_method;
-use oc_wasm_safe::{component::Invoker, Address};
+use oc_wasm_safe::{
+	component::{Invoker, MethodCallError},
+	Address,
+};
 
 /// The type name for GPU components.
 pub const TYPE: &str = "gpu";
@@ -73,10 +75,8 @@ impl<'a> Locked<'a> {
 	/// and its colours are set to white on black. The text content, however, is not cleared.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the screen does not exist, is inaccessible, or
-	///   is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn bind(&mut self, screen: Address, reset: bool) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, Ignore> = component_method(
 			self.invoker,
@@ -86,28 +86,32 @@ impl<'a> Locked<'a> {
 			Some(&TwoValues(screen, reset)),
 		)
 		.await?;
-		ret.into_result()?;
-		Ok(())
+		match ret {
+			NullAndStringOr::Ok(_) => Ok(()),
+			NullAndStringOr::Err(_) => Err(Error::BadScreen),
+		}
 	}
 
 	/// Returns the address of the screen the GPU is bound to, or `None` if it is unbound.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
-		let ret: OneValue<_> =
+		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getScreen", None)
 				.await?;
-		Ok(ret.0)
+		Ok(match ret {
+			NullAndStringOr::Ok(ret) => ret.0,
+			NullAndStringOr::Err(_) => None,
+		})
 	}
 
 	/// Returns the background colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_background(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getBackground").await
 	}
@@ -115,10 +119,9 @@ impl<'a> Locked<'a> {
 	/// Sets the background colour, returning the old colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the provided colour is
-	///   an out-of-range palette index.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_background(
 		&mut self,
 		colour: Colour,
@@ -129,9 +132,8 @@ impl<'a> Locked<'a> {
 	/// Returns the foreground colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_foreground(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getForeground").await
 	}
@@ -139,10 +141,9 @@ impl<'a> Locked<'a> {
 	/// Sets the foreground colour, returning the old colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the provided colour is
-	///   an out-of-range palette index.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_foreground(
 		&mut self,
 		colour: Colour,
@@ -153,10 +154,9 @@ impl<'a> Locked<'a> {
 	/// Returns the colour at a palette index.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the palette index is
-	///   out of range.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_palette_colour(&mut self, index: PaletteIndex) -> Result<Rgb, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, _> = component_method(
 			self.invoker,
@@ -166,30 +166,17 @@ impl<'a> Locked<'a> {
 			Some(&OneValue(index.0)),
 		)
 		.await;
-		match ret {
-			Ok(ret) => {
-				let ret = ret.into_result()?;
-				Ok(Rgb(ret.0))
-			}
-			Err(e) => {
-				if e == oc_wasm_safe::error::Error::BadParameters {
-					// This is returned if the palette index is out of range.
-					Err(Error::Failed("invalid palette index".to_owned()))
-				} else {
-					// Any other errors convert to BadComponent as usual.
-					Err(Error::BadComponent(e))
-				}
-			}
-		}
+		let ret = Self::map_bad_parameters(ret, Error::BadPaletteIndex)?;
+		let ret = Self::map_no_screen(ret)?;
+		Ok(Rgb(ret.0))
 	}
 
 	/// Sets the colour at a palette index, returning the old colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the palette index is
-	///   out of range.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_palette_colour(
 		&mut self,
 		index: PaletteIndex,
@@ -203,68 +190,55 @@ impl<'a> Locked<'a> {
 			Some(&TwoValues(index.0, colour.0)),
 		)
 		.await;
-		match ret {
-			Ok(ret) => {
-				let ret = ret.into_result()?;
-				Ok(Rgb(ret.0))
-			}
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				// This is returned if the palette index is out of range.
-				Err(Error::Failed("invalid palette index".to_owned()))
-			}
-			Err(e) => {
-				// Any other errors convert to BadComponent as usual.
-				Err(Error::BadComponent(e))
-			}
-		}
+		let ret = Self::map_bad_parameters(ret, Error::BadPaletteIndex)?;
+		let ret = Self::map_no_screen(ret)?;
+		Ok(Rgb(ret.0))
 	}
 
 	/// Returns the maximum supported colour depth based on the tiers of the GPU and the bound
 	/// screen.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "maxDepth", None)
 				.await?;
-		let ret = ret.into_result()?;
+		let ret = Self::map_no_screen(ret)?;
 		Ok(ret.0)
 	}
 
 	/// Returns the colour depth currently in use.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getDepth", None)
 				.await?;
-		let ret = ret.into_result()?;
+		let ret = Self::map_no_screen(ret)?;
 		Ok(ret.0)
 	}
 
 	/// Sets the colour depth.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or the specified depth is not
-	///   1, 4, or 8, or is higher than supported by the hardware.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadDepth`](Error::BadDepth)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_depth(&mut self, depth: u8) -> Result<(), Error> {
-		let ret: NullAndStringOr<'_, Ignore> = component_method(
+		let ret: Result<NullAndStringOr<'_, Ignore>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setDepth",
 			Some(&OneValue(depth)),
 		)
-		.await?;
-		ret.into_result()?;
+		.await;
+		let ret = Self::map_bad_parameters(ret, Error::BadDepth)?;
+		Self::map_no_screen(ret)?;
 		Ok(())
 	}
 
@@ -272,9 +246,8 @@ impl<'a> Locked<'a> {
 	/// screen.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn max_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("maxResolution").await
 	}
@@ -282,9 +255,8 @@ impl<'a> Locked<'a> {
 	/// Returns the resolution currently in use.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getResolution").await
 	}
@@ -293,21 +265,18 @@ impl<'a> Locked<'a> {
 	/// value.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or the specified resolution
-	///   is higher than supported by the hardware.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadCoordinate`](Error::BadCoordinate)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_resolution(&mut self, resolution: Dimension) -> Result<bool, Error> {
-		self.set_dimension("setResolution", resolution, "unsupported resolution")
-			.await
+		self.set_dimension("setResolution", resolution).await
 	}
 
 	/// Returns the viewport currently in use.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_viewport(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getViewport").await
 	}
@@ -315,13 +284,11 @@ impl<'a> Locked<'a> {
 	/// Sets the viewport, returning whether or not it was changed from its previous value.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or the specified viewport
-	///   size is higher than supported by the hardware.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadCoordinate`](Error::BadCoordinate)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn set_viewport(&mut self, resolution: Dimension) -> Result<bool, Error> {
-		self.set_dimension("setViewport", resolution, "unsupported view port size")
-			.await
+		self.set_dimension("setViewport", resolution).await
 	}
 
 	/// Returns the character and colours at a specific character cell.
@@ -332,10 +299,9 @@ impl<'a> Locked<'a> {
 	/// silently returned instead.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or the specified position is
-	///   outside the visible region of the screen.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadCoordinate`](Error::BadCoordinate)
+	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get(&mut self, point: Point) -> Result<CharacterCellContents, Error> {
 		type Return<'character> = FiveValues<&'character str, u32, u32, Option<u32>, Option<u32>>;
 		let ret: Result<NullAndStringOr<'_, Return<'_>>, _> = component_method(
@@ -346,41 +312,27 @@ impl<'a> Locked<'a> {
 			Some(&TwoValues(point.x, point.y)),
 		)
 		.await;
-		match ret {
-			Ok(ret) => {
-				let ret = ret.into_result()?;
-				if let Some(character) = ret.0.chars().next() {
-					Ok(CharacterCellContents {
-						character,
-						foreground: (Rgb(ret.1), ret.3.map(PaletteIndex)),
-						background: (Rgb(ret.2), ret.4.map(PaletteIndex)),
-					})
-				} else {
-					// A GPU’s get method never returns an empty string. Therefore, if we see one,
-					// we must not have been talking to a GPU.
-					Err(Error::BadComponent(oc_wasm_safe::error::Error::CborDecode))
-				}
-			}
-			Err(oc_wasm_safe::error::Error::BadParameters | oc_wasm_safe::error::Error::Other) => {
-				// BadParameters probably should be returned if the point is out of range. However,
-				// OpenComputers throws IndexOutOfBoundsException, not IllegalArgumentException, in
-				// this case, which maps to Other.
-				Err(Error::Failed("invalid position".to_owned()))
-			}
-			Err(e) => {
-				// Any other errors convert to BadComponent as usual.
-				Err(Error::BadComponent(e))
-			}
+		let ret = Self::map_bad_parameters(ret, Error::BadCoordinate)?;
+		let ret = Self::map_no_screen(ret)?;
+		if let Some(character) = ret.0.chars().next() {
+			Ok(CharacterCellContents {
+				character,
+				foreground: (Rgb(ret.1), ret.3.map(PaletteIndex)),
+				background: (Rgb(ret.2), ret.4.map(PaletteIndex)),
+			})
+		} else {
+			// A GPU’s get method never returns an empty string. Therefore, if we see one,
+			// we must not have been talking to a GPU.
+			Err(Error::BadComponent(oc_wasm_safe::error::Error::CborDecode))
 		}
 	}
 
 	/// Writes text to the screen.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or there is not enough energy
-	///   available.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn set(
 		&mut self,
 		position: Point,
@@ -412,17 +364,22 @@ impl<'a> Locked<'a> {
 			}),
 		)
 		.await?;
-		ret.into_result()?;
-		Ok(())
+		match ret {
+			NullAndStringOr::Ok(_) => Ok(()),
+			NullAndStringOr::Err("no screen") => Err(Error::BadScreen),
+			NullAndStringOr::Err("not enough energy") => Err(Error::NotEnoughEnergy),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+		}
 	}
 
 	/// Copies data from one rectangle to another.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or there is not enough energy
-	///   available.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn copy(
 		&mut self,
 		source: Point,
@@ -460,17 +417,22 @@ impl<'a> Locked<'a> {
 			}),
 		)
 		.await?;
-		ret.into_result()?;
-		Ok(())
+		match ret {
+			NullAndStringOr::Ok(_) => Ok(()),
+			NullAndStringOr::Err("no screen") => Err(Error::BadScreen),
+			NullAndStringOr::Err("not enough energy") => Err(Error::NotEnoughEnergy),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+		}
 	}
 
 	/// Fills a rectangle with a character.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound, there is not enough energy
-	///   available, or `character` lies outside the basic multilingual plane.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn fill(
 		&mut self,
 		target: Point,
@@ -508,19 +470,32 @@ impl<'a> Locked<'a> {
 		)
 		.await;
 		match ret {
-			Ok(ret) => {
-				ret.into_result()?;
-				Ok(())
+			Ok(NullAndStringOr::Ok(_)) => Ok(()),
+			Ok(NullAndStringOr::Err("no screen")) => Err(Error::BadScreen),
+			Ok(NullAndStringOr::Err("not enough energy")) => Err(Error::NotEnoughEnergy),
+			Ok(NullAndStringOr::Err(_)) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 			}
-			Err(oc_wasm_safe::error::Error::BadParameters | oc_wasm_safe::error::Error::Other) => {
-				// BadParameters probably should be returned if the character involves more than
+			Err(
+				e @ (MethodCallError::Other(exception) | MethodCallError::BadParameters(exception)),
+			) => {
+				// BadParameters would be the sensible error if the character involves more than
 				// one UTF-16 code unit. However, OpenComputers throws unqualified Exception, not
-				// IllegalArgumentException, in this case, which maps to Other.
-				Err(Error::Failed("invalid fill value".to_owned()))
+				// IllegalArgumentException, in this case, which maps to Other. Just in case they
+				// make it more sane later, check both! And for more certainty, check the message
+				// too.
+				let len = exception.message_length();
+				self.buffer.resize(len, 0);
+				let message = exception.message(self.buffer).unwrap();
+				if message == "invalid fill value" {
+					Err(Error::BadFillCharacter)
+				} else {
+					Err(Error::BadComponent(e.into()))
+				}
 			}
 			Err(e) => {
 				// Any other errors convert to BadComponent as usual.
-				Err(Error::BadComponent(e))
+				Err(Error::BadComponent(e.into()))
 			}
 		}
 	}
@@ -528,15 +503,14 @@ impl<'a> Locked<'a> {
 	/// Returns the foreground or background colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a Vec which cannot fail.
 	async fn get_colour(&mut self, method: &str) -> Result<Colour, Error> {
 		let ret: NullAndStringOr<'_, TwoValues<u32, bool>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
-		let ret = ret.into_result()?;
+		let ret = Self::map_no_screen(ret)?;
 		Ok(if ret.1 {
 			Colour::PaletteIndex(PaletteIndex(ret.0))
 		} else {
@@ -547,10 +521,9 @@ impl<'a> Locked<'a> {
 	/// Sets the foreground or background colour, returning the old colour.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the provided colour is
-	///   an out-of-range palette index.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
+	/// * [`BadScreen`](Error::BadScreen)
 	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a Vec which cannot fail.
 	async fn set_colour(
 		&mut self,
@@ -561,7 +534,7 @@ impl<'a> Locked<'a> {
 			Colour::Rgb(rgb) => TwoValues(rgb.0, false),
 			Colour::PaletteIndex(pi) => TwoValues(pi.0, true),
 		};
-		let ret: Result<TwoValues<u32, Option<u32>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, TwoValues<u32, Option<u32>>>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -569,42 +542,31 @@ impl<'a> Locked<'a> {
 			Some(&params),
 		)
 		.await;
-		match ret {
-			Ok(ret) => Ok((Rgb(ret.0), ret.1.map(PaletteIndex))),
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				// This is returned if the palette index is out of range.
-				Err(Error::Failed("invalid palette index".to_owned()))
-			}
-			Err(e) => Err(e.into()),
-		}
+		let ret = Self::map_bad_parameters(ret, Error::BadPaletteIndex)?;
+		let ret = Self::map_no_screen(ret)?;
+		Ok((Rgb(ret.0), ret.1.map(PaletteIndex)))
 	}
 
 	/// Returns the current or maximum resolution or the current viewport size.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadScreen`](Error::BadScreen)
 	async fn get_dimension(&mut self, method: &str) -> Result<Dimension, Error> {
 		let ret: NullAndStringOr<'_, Dimension> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
-		ret.into_result()
+		let ret = Self::map_no_screen(ret)?;
+		Ok(ret)
 	}
 
 	/// Sets the resolution or viewport size, returning whether or not it changed.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the GPU does not exist, is
-	///   inaccessible, or is not a GPU.
-	/// * [`Failed`](Error::Failed) is returned if the GPU is unbound or if the specified dimension
-	///   is higher than supported by the hardware.
-	async fn set_dimension(
-		&mut self,
-		method: &str,
-		parameter: Dimension,
-		out_of_range_string: &str,
-	) -> Result<bool, Error> {
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadCoordinate`](Error::BadCoordinate)
+	/// * [`BadScreen`](Error::BadScreen)
+	async fn set_dimension(&mut self, method: &str, parameter: Dimension) -> Result<bool, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, _> = component_method(
 			self.invoker,
 			self.buffer,
@@ -613,15 +575,36 @@ impl<'a> Locked<'a> {
 			Some(&parameter),
 		)
 		.await;
-		match ret {
-			Ok(ret) => Ok(ret.into_result()?.0),
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				// This is returned if the dimension is out of range.
-				Err(Error::Failed(out_of_range_string.to_owned()))
-			}
-			Err(e) => {
-				// Any other errors convert to BadComponent as usual.
-				Err(Error::BadComponent(e))
+		let ret = Self::map_bad_parameters(ret, Error::BadCoordinate)?;
+		let ret = Self::map_no_screen(ret)?;
+		Ok(ret.0)
+	}
+
+	/// Given a “raw” `Result` whose
+	/// [`MethodCallError::BadParameters`](MethodCallError::BadParameters) needs to map to one
+	/// specific [`Error`](Error) value, with all others mapping to
+	/// [`Error::BadComponent`](Error::BadComponent), returns the “cooked” `Result` with the errors
+	/// mapped accordingly.
+	fn map_bad_parameters<T>(
+		x: Result<T, MethodCallError<'_>>,
+		bad_parameters: Error,
+	) -> Result<T, Error> {
+		x.map_err(|e| match e {
+			MethodCallError::BadParameters(_) => bad_parameters,
+			e => Error::BadComponent(e.into()),
+		})
+	}
+
+	/// Given a `NullAndStringOr` from a function whose only expected null-and-string return is “no
+	/// screen”, maps that error to [`Error::BadScreen`](Error::BadScreen), all other
+	/// null-and-string errors to [`Error::BadComponent`](Error::BadComponent), and returns any
+	/// success object unmodified.
+	fn map_no_screen<T>(x: NullAndStringOr<'_, T>) -> Result<T, Error> {
+		match x {
+			NullAndStringOr::Ok(x) => Ok(x),
+			NullAndStringOr::Err("no screen") => Err(Error::BadScreen),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 			}
 		}
 	}

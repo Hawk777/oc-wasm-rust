@@ -67,8 +67,7 @@ impl<'a> Locked<'a> {
 	/// Checks whether the screen is powered on or off.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_on(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isOn", None)
@@ -79,8 +78,7 @@ impl<'a> Locked<'a> {
 	/// Powers on the screen, returning whether the power was previously off.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn turn_on(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOn", None)
@@ -91,8 +89,7 @@ impl<'a> Locked<'a> {
 	/// Powers off the screen, returning whether the power was previously on.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn turn_off(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOff", None)
@@ -103,8 +100,7 @@ impl<'a> Locked<'a> {
 	/// Returns the screen’s aspect ratio. The aspect ratio is measured in metres.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_aspect_ratio(&mut self) -> Result<Dimension, Error> {
 		let ret: TwoValues<f64, f64> = component_method::<(), _>(
 			self.invoker,
@@ -127,8 +123,7 @@ impl<'a> Locked<'a> {
 	/// Returns the addresses of the keyboards connected to the screen.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_keyboards(&mut self) -> Result<Vec<Address>, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
@@ -145,10 +140,9 @@ impl<'a> Locked<'a> {
 	/// setting.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
-	/// * [`Failed`](Error::Failed) is returned if the screen is not advanced enough to return
-	///   subpixel-granularity touch data.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`Unsupported`](Error::Unsupported) is returned if the screen is not advanced enough to
+	///   return subpixel-granularity touch data.
 	pub async fn set_precise(&mut self, precise: bool) -> Result<bool, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
 			self.invoker,
@@ -158,14 +152,19 @@ impl<'a> Locked<'a> {
 			Some(&OneValue(precise)),
 		)
 		.await?;
-		Ok(ret.into_result()?.0)
+		match ret {
+			NullAndStringOr::Ok(OneValue(f)) => Ok(f),
+			NullAndStringOr::Err("unsupported operation") => Err(Error::Unsupported),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+		}
 	}
 
 	/// Returns whether mouse positions are reported at subpixel granularity.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_precise(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isPrecise", None)
@@ -177,8 +176,7 @@ impl<'a> Locked<'a> {
 	/// configuration and returns the old setting.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_touch_mode_inverted(&mut self, inverted: bool) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,
@@ -195,8 +193,7 @@ impl<'a> Locked<'a> {
 	/// configuration.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the screen does not exist, is
-	///   inaccessible, or is not a screen.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_touch_mode_inverted(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,

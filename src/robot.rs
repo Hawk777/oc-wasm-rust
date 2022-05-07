@@ -3,12 +3,17 @@
 use crate::common::{Lockable, RelativeSide, Rgb, Side, TryFromIntError};
 use crate::error::Error;
 use crate::helpers::{FourValues, NullAndStringOr, OneValue, ThreeValues, TwoValues};
-use alloc::{borrow::ToOwned, vec::Vec};
+use alloc::vec::Vec;
 use core::convert::TryFrom;
+use core::fmt::{Display, Formatter};
 use core::num::NonZeroU32;
+use core::str::FromStr;
 use minicbor::Decode;
 use oc_wasm_futures::invoke::component_method;
-use oc_wasm_safe::{component::Invoker, Address};
+use oc_wasm_safe::{
+	component::{Invoker, MethodCallError},
+	Address,
+};
 
 /// The type name for robot components.
 pub const TYPE: &str = "robot";
@@ -18,8 +23,8 @@ pub const TYPE: &str = "robot";
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TryFromRelativeSideError(());
 
-impl core::fmt::Display for TryFromRelativeSideError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+impl Display for TryFromRelativeSideError {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
 		"invalid value".fmt(f)
 	}
 }
@@ -243,6 +248,51 @@ pub enum BlockContent {
 	Solid,
 }
 
+impl BlockContent {
+	/// Returns a string describing the content.
+	#[must_use = "This function is only useful for its return value"]
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Entity => "entity",
+			Self::Air => "air",
+			Self::Liquid => "liquid",
+			Self::Replaceable => "replaceable",
+			Self::Passable => "passable",
+			Self::Solid => "solid",
+		}
+	}
+}
+
+impl Display for BlockContent {
+	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
+		self.as_str().fmt(f)
+	}
+}
+
+impl FromStr for BlockContent {
+	type Err = Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"entity" => Ok(Self::Entity),
+			"air" => Ok(Self::Air),
+			"liquid" => Ok(Self::Liquid),
+			"replaceable" => Ok(Self::Replaceable),
+			"passable" => Ok(Self::Passable),
+			"solid" => Ok(Self::Solid),
+			_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
+		}
+	}
+}
+
+impl TryFrom<&str> for BlockContent {
+	type Error = <Self as FromStr>::Err;
+
+	fn try_from(s: &str) -> Result<Self, Self::Error> {
+		Self::from_str(s)
+	}
+}
+
 /// A robot component.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Robot(Address);
@@ -301,8 +351,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the colour of the robot’s side body light.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_light_colour(&mut self) -> Result<Rgb, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
@@ -318,8 +367,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Sets the colour of the robot’s side body light.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_light_colour(&mut self, colour: Rgb) -> Result<(), Error> {
 		component_method::<_, OneValue<u32>>(
 			self.invoker,
@@ -338,8 +386,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The durability value, if available, is a number between 0 and 1.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn durability(&mut self) -> Result<Option<f64>, Error> {
 		let ret: NullAndStringOr<'_, OneValue<f64>> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "durability", None)
@@ -355,11 +402,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `direction` parameter indicates in which direction to try to move.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the target location is obstructed, the robot is
-	///   (or would be) too high above the ground for its current flight height ability, or there
-	///   is not enough energy.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`Blocked`](Error::Blocked)
+	/// * [`ImpossibleMove`](Error::ImpossibleMove)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn move_robot(&mut self, direction: MoveDirection) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, OneValue<bool>> = component_method(
 			self.invoker,
@@ -369,8 +415,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&OneValue(u8::from(direction))),
 		)
 		.await?;
-		ret.into_result()?;
-		Ok(())
+		match ret {
+			NullAndStringOr::Ok(_) => Ok(()),
+			NullAndStringOr::Err("not enough energy") => Err(Error::NotEnoughEnergy),
+			NullAndStringOr::Err("impossible move") => Err(Error::ImpossibleMove),
+			NullAndStringOr::Err(s) => Err(Error::Blocked(s.parse()?)),
+		}
 	}
 
 	/// Turns the robot.
@@ -378,9 +428,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `direction` parameter indicates in which direction to turn.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if there is not enough energy.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn turn(&mut self, direction: Rotation) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, OneValue<bool>> = component_method(
 			self.invoker,
@@ -390,15 +439,19 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&OneValue(direction == Rotation::Clockwise)),
 		)
 		.await?;
-		ret.into_result()?;
-		Ok(())
+		match ret {
+			NullAndStringOr::Ok(_) => Ok(()),
+			NullAndStringOr::Err("not enough energy") => Err(Error::NotEnoughEnergy),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+		}
 	}
 
 	/// Returns the robot’s name.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn name(self) -> Result<&'buffer str, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -418,10 +471,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// `sneak` parameter indicates whether or not to sneak while operating the tool.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the block in the target location is too hard for
-	///   the equipped tool to break, or the tool is of the wrong kind (for example, a shovel
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the block in the target location is too hard
+	///   for the equipped tool to break, or the tool is of the wrong kind (for example, a shovel
 	///   swinging at cobblestone).
 	pub async fn swing(
 		&mut self,
@@ -443,7 +495,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			if ret.0 {
 				Ok(ToolHit::Block)
 			} else {
-				Err(Error::Failed("block too hard".to_owned()))
+				Err(Error::BadItem)
 			}
 		} else if ret.1 == "fire" {
 			Ok(ToolHit::Fire)
@@ -465,8 +517,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// `duration` parameter indicates how long to hold down the right mouse button.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`Failed`](Error::Failed) is returned if the item is not usable (for example, if it is a
 	///   piece of coal), is usable on certain entities but such entities are not present (for
 	///   example, if it is a shears and there is nothing in front of the robot or the entity in
@@ -509,7 +560,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			// component that also has a method named use.
 			Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 		} else {
-			Err(Error::Failed("use failed".to_owned()))
+			Err(Error::Failed)
 		}
 	}
 
@@ -523,15 +574,15 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// whether or not to sneak while placing the item.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if there is no item selected; the selected item
-	///   does not have a placeable block form (e.g. it is a tool instead); the target location is
-	///   obstructed by an existing block; there is no existing block adjacent to the target
-	///   placement location and the robot is not equipped with an angel upgrade; or `face` is
-	///   provided, there is no existing block adjacent to the target placement location on the
-	///   specified side, and the robot is not equipped with an angel upgrade; `face` is provided
-	///   and points back towards the robot; or there is not enough energy.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if there is no item selected.
+	/// * [`Failed`](Error::Failed) is returned if the selected item does not have a placeable
+	///   block form (e.g. it is a tool instead); the target location is obstructed by an existing
+	///   block; there is no existing block adjacent to the target placement location and the robot
+	///   is not equipped with an angel upgrade; or `face` is provided, there is no existing block
+	///   adjacent to the target placement location on the specified side, and the robot is not
+	///   equipped with an angel upgrade; `face` is provided and points back towards the robot; or
+	///   there is not enough energy.
 	pub async fn place(
 		&mut self,
 		side: ActionSide,
@@ -546,11 +597,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&ThreeValues(u8::from(side), face.map(u8::from), sneak)),
 		)
 		.await?;
-		let ret = ret.into_result()?;
-		if ret.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("failed to place item".to_owned()))
+		match ret {
+			NullAndStringOr::Ok(OneValue(true)) => Ok(()),
+			NullAndStringOr::Ok(OneValue(false)) => Err(Error::Failed),
+			NullAndStringOr::Err("nothing selected") => Err(Error::BadItem),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
 		}
 	}
 
@@ -560,8 +613,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// direction, to scan.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn detect(&mut self, side: ActionSide) -> Result<BlockContent, Error> {
 		let ret: TwoValues<bool, &str> = component_method(
 			self.invoker,
@@ -571,22 +623,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&OneValue(u8::from(side))),
 		)
 		.await?;
-		match ret.1 {
-			"entity" => Ok(BlockContent::Entity),
-			"air" => Ok(BlockContent::Air),
-			"liquid" => Ok(BlockContent::Liquid),
-			"replaceable" => Ok(BlockContent::Replaceable),
-			"passable" => Ok(BlockContent::Passable),
-			"solid" => Ok(BlockContent::Solid),
-			_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Other)),
-		}
+		ret.1.parse()
 	}
 
 	/// Returns the size of the robot’s inventory, in slots.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn inventory_size(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -602,61 +645,58 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the currently selected inventory slot number.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if no inventory slot is selected because the robot
-	///   does not have any inventory slots.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn selected(&mut self) -> Result<NonZeroU32, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "select", None)
 				.await?;
 		match NonZeroU32::new(ret.0) {
 			Some(n) => Ok(n),
-			None => {
-				// The OpenComputers robot’s select method always returns a nonzero value.
-				// Therefore, if we get a zero value, we must be addressing a different component
-				// that also has a method named select.
-				Err(Error::Failed("no inventory".to_owned()))
-			}
+			None => Err(Error::NoInventory),
 		}
 	}
 
 	/// Selects an inventory slot.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn select(&mut self, slot: NonZeroU32) -> Result<(), Error> {
-		component_method::<_, OneValue<u32>>(
+		let ret = component_method::<_, OneValue<u32>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"select",
 			Some(&OneValue(slot)),
 		)
-		.await?;
-		Ok(())
+		.await;
+		match ret {
+			Ok(_) => Ok(()),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of items in an inventory slot.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn count(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"count",
 			Some(&OneValue(slot)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(n)) => Ok(n),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of items in the currently selected inventory slot.
@@ -664,8 +704,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the robot does not have an inventory, this function returns 0.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn count_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -681,20 +720,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the number of items that can be added to an inventory slot.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn space(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"space",
 			Some(&OneValue(slot)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(n)) => Ok(n),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of items that can be added to the currently selected inventory slot.
@@ -702,8 +743,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the robot does not have an inventory, this function returns 64.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn space_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -725,20 +765,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// torches are considered equal.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn compare_to(&mut self, other_slot: NonZeroU32, nbt: bool) -> Result<bool, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"compareTo",
 			Some(&TwoValues(other_slot, nbt)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(f)) => Ok(f),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Moves items from the currently selected inventory slot to the specified inventory slot.
@@ -751,26 +793,26 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// number of items in the selected slot, then the two stacks are swapped.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size, or `amount` was nonzero but no items could be moved (because the source
-	///   stack is empty, the target stack is of the same type and full, or the target stack is of
-	///   a different type and `amount` is less than the size of the source stack and therefore the
-	///   stacks cannot be swapped).
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`Failed`](Error::Failed) is returned if `amount` was nonzero but no items could be moved
+	///   (because the source stack is empty, the target stack is of the same type and full, or the
+	///   target stack is of a different type and `amount` is less than the size of the source
+	///   stack and therefore the stacks cannot be swapped).
 	pub async fn transfer_to(&mut self, target_slot: NonZeroU32, amount: u32) -> Result<(), Error> {
-		let ret: OneValue<bool> = component_method(
+		let ret = component_method::<_, OneValue<bool>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"transferTo",
 			Some(&TwoValues(target_slot, amount)),
 		)
-		.await?;
-		if ret.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("transfer failed".to_owned()))
+		.await;
+		match ret {
+			Ok(OneValue(true)) => Ok(()),
+			Ok(OneValue(false)) => Err(Error::Failed),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 
@@ -782,8 +824,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// considered unequal to any itemstack.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn compare(&mut self, side: ActionSide, fuzzy: bool) -> Result<bool, Error> {
 		Ok(component_method::<_, OneValue<_>>(
 			self.invoker,
@@ -809,24 +850,26 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// smaller stack is dropped.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the currently selected slot is empty or the
-	///    destination is an inventory which is completely full or cannot accept items of the
-	///    desired type.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoItem`](Error::NoItem)
 	pub async fn drop(&mut self, side: ActionSide, count: u32) -> Result<(), Error> {
-		let ret: OneValue<bool> = component_method(
+		let ret = component_method::<_, TwoValues<bool, Option<&str>>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"drop",
 			Some(&TwoValues(u8::from(side), count)),
 		)
-		.await?;
-		if ret.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("drop failed".to_owned()))
+		.await;
+		match ret {
+			Ok(TwoValues(true, _)) => Ok(()),
+			Ok(TwoValues(false, None)) => Err(Error::NoItem),
+			Ok(TwoValues(false, Some("inventory full"))) => Err(Error::InventoryFull),
+			Ok(TwoValues(false, Some(_))) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 
@@ -854,8 +897,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// `count` is ignored.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`Failed`](Error::Failed) is returned if there are no items in the specified direction,
 	///   there is no space to move the items into (due to either number or type), or the adjacent
 	///   inventory does not allow items to be removed.
@@ -882,7 +924,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		)
 		.await?;
 		match ret.0 {
-			BoolOrU32::Bool(false) => Err(Error::Failed("suck failed".to_owned())),
+			BoolOrU32::Bool(false) => Err(Error::Failed),
 			BoolOrU32::Bool(true) => {
 				// The OpenComputers robot component’s suck method never returns true. Therefore,
 				// if we see true, we must be addressing a different component that also has a
@@ -899,8 +941,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// installed in the robot.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_count(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -918,8 +959,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the robot has no tanks at all, this function returns 1.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn selected_tank(&mut self) -> Result<NonZeroU32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -935,39 +975,43 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Selects an internal fluid tank.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
-	///   tank count.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn select_tank(&mut self, tank: NonZeroU32) -> Result<(), Error> {
-		component_method::<_, OneValue<u32>>(
+		let ret = component_method::<_, OneValue<u32>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"selectTank",
 			Some(&OneValue(tank)),
 		)
-		.await?;
-		Ok(())
+		.await;
+		match ret {
+			Ok(_) => Ok(()),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of millibuckets of fluid in an internal fluid tank.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
-	///   tank count.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn tank_level(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"tankLevel",
 			Some(&OneValue(tank)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(n)) => Ok(n),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of millibuckets of fluid in the currently selected internal fluid tank.
@@ -975,8 +1019,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the robot does not have any tanks, this function returns 0.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_level_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -992,20 +1035,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the number of millibuckets of fluid that can be added to an internal fluid tank.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
-	///   tank count.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn tank_space(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"tankSpace",
 			Some(&OneValue(tank)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(n)) => Ok(n),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Returns the number of millibuckets of fluid that can be added to the currently selected
@@ -1014,8 +1059,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the robot does not have any tanks, this function returns 0.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_space_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>>(
 			self.invoker,
@@ -1034,20 +1078,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Two empty tanks are considered equal. An empty tank is not equal to any nonempty tank.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
-	///   tank count.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn compare_fluid_to(&mut self, other_tank: NonZeroU32) -> Result<bool, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"compareFluidTo",
 			Some(&OneValue(other_tank)),
 		)
-		.await?
-		.0)
+		.await;
+		match ret {
+			Ok(OneValue(f)) => Ok(f),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(Error::BadComponent(e.into())),
+		}
 	}
 
 	/// Moves fluid from the currently selected internal fluid tank to the specified internal fluid
@@ -1063,8 +1109,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// is moved to the source tank (i.e. the tanks’s contents are swapped).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
 	///   tank count, or `amount` was nonzero but no fluid could be moved (because the source tank
 	///   is empty, the target tank is of the same type and full, or the target tank is of a
@@ -1075,18 +1121,28 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		target_tank: NonZeroU32,
 		amount: u32,
 	) -> Result<(), Error> {
-		let ret: OneValue<bool> = component_method(
+		let ret = component_method::<_, NullAndStringOr<'_, bool>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"transferFluidTo",
 			Some(&TwoValues(target_tank, amount)),
 		)
-		.await?;
-		if ret.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("transfer failed".to_owned()))
+		.await;
+		match ret {
+			Ok(NullAndStringOr::Ok(true)) => Ok(()),
+			Ok(NullAndStringOr::Err("incompatible or no fluid")) => Err(Error::Failed),
+			Ok(NullAndStringOr::Err("invalid index")) | Err(MethodCallError::BadParameters(_)) => {
+				Err(Error::BadInventorySlot)
+			}
+			Ok(NullAndStringOr::Ok(false) | NullAndStringOr::Err(_)) => {
+				// The OpenComputers robot component’s transferFluidTo method never returns false.
+				// Therefore, if we see true, we must be addressing a different component that also
+				// has a method named transferFluidTo. Also do that for any other null-and-string
+				// returns we don’t recognize.
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+			Err(e) => Err(e.into()),
 		}
 	}
 
@@ -1098,25 +1154,29 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// to everything, including another empty tank.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if there is no fluid-containing block on the
-	///   specified side, or if the `tank` parameter is greater than the number of tanks in the
-	///   block and the selected internal tank is nonempty.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot) is returned if there is no fluid-containing
+	///   block on the specified side or if the `tank` parameter is greater than the number of
+	///   tanks in the block and the selected internal tank is nonempty, but only if the selected
+	///   tank is non-empty.
 	pub async fn compare_fluid(
 		&mut self,
 		side: ActionSide,
 		tank: NonZeroU32,
 	) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret = component_method::<_, OneValue<bool>>(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"compareFluid",
 			Some(&TwoValues(u8::from(side), tank)),
 		)
-		.await?;
-		Ok(ret.0)
+		.await;
+		match ret {
+			Ok(OneValue(b)) => Ok(b),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(e) => Err(e.into()),
+		}
 	}
 
 	/// Moves fluid from an external block’s fluid tank to the currently selected internal fluid
@@ -1126,12 +1186,11 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// the source tank, and the amount of space in the target tank, and this number is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
-	///   selected internal tank is full and `amount` is nonzero, the external source tank is empty
-	///   and `amount` is nonzero, or the internal and external tanks contain different types of
-	///   fluid and `amount` is nonzero.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the destination already contains an
+	///   incompatible fluid.
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
 	pub async fn drain(&mut self, side: ActionSide, amount: u32) -> Result<u32, Error> {
 		self.drain_or_fill(side, amount, "drain").await
 	}
@@ -1142,12 +1201,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// the source tank, and the amount of space in the target tank, and this number is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
-	///   selected internal tank is empty and `amount` is nonzero, the external destination tank is
-	///   full and `amount` is nonzero, or the internal and external tanks contain different types
-	///   of fluid and `amount` is nonzero.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the destination already contains an
+	///   incompatible fluid.
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
+	/// * [`NoItem`](Error::NoItem) is returned if the source tank is empty and `amount` is
+	///   nonzero.
 	pub async fn fill(&mut self, side: ActionSide, amount: u32) -> Result<u32, Error> {
 		self.drain_or_fill(side, amount, "fill").await
 	}
@@ -1155,11 +1215,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Implements the [`drain`](drain) or [`fill`](fill) function.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the robot does not exist, is
-	///   inaccessible, or is not a robot.
-	/// * [`Failed`] is returned if the robot does not contain any tanks, the source tank is empty
-	///   and `amount` is nonzero, the destination tank is full and `amount` is nonzero, or the
-	///   source and destination tanks contain different types of fluid and `amount` is nonzero.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the destination already contains an
+	///   incompatible fluid.
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
+	/// * [`NoItem`](Error::NoItem) is returned if the source tank is empty and `amount` is
+	///   nonzero.
 	async fn drain_or_fill(
 		&mut self,
 		side: ActionSide,
@@ -1174,6 +1236,15 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&TwoValues(u8::from(side), amount)),
 		)
 		.await?;
-		Ok(ret.into_result()?.1)
+		match ret {
+			NullAndStringOr::Ok(TwoValues(_, n)) => Ok(n),
+			NullAndStringOr::Err("incompatible or no fluid") => Err(Error::BadItem),
+			NullAndStringOr::Err("no space" | "tank is full") => Err(Error::InventoryFull),
+			NullAndStringOr::Err("no tank selected") => Err(Error::NoInventory),
+			NullAndStringOr::Err("tank is empty") => Err(Error::NoItem),
+			NullAndStringOr::Err(_) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+		}
 	}
 }

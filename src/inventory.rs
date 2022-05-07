@@ -9,14 +9,17 @@
 use crate::common::{Lockable, RelativeSide, Side};
 use crate::error::Error;
 use crate::helpers::{
-	FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues, TwoValues,
+	max_of_usizes, FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues,
+	TwoValues,
 };
-use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 use core::num::NonZeroU32;
-use minicbor::{Decode, Decoder, Encode};
+use minicbor::{Decode, Decoder};
 use oc_wasm_futures::invoke::{component_method, value_method};
-use oc_wasm_safe::{component::Invoker, descriptor, Address};
+use oc_wasm_safe::{
+	component::{Invoker, MethodCallError},
+	descriptor, Address,
+};
 
 pub use super::robot::ActionSide;
 
@@ -101,21 +104,21 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the number of slots in an inventory.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn get_inventory_size(&mut self, side: impl Side) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getInventorySize",
-			Some(&OneValue(side)),
-		)
-		.await?;
-		Ok(ret.into_result()?.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getInventorySize",
+				Some(&OneValue(side)),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the number of items in an inventory slot.
@@ -123,19 +126,25 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `slot` parameter ranges from 1 to the inventory size.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if the requested slot number is greater than the inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn get_slot_stack_size(
 		&mut self,
 		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = self
-			.call_check_invalid_slots("getSlotStackSize", &TwoValues(side, slot))
-			.await?;
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getSlotStackSize",
+				Some(&TwoValues(side, slot)),
+			)
+			.await,
+		)?;
 		Ok(ret.0)
 	}
 
@@ -145,19 +154,25 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// items, `None` is returned because the maximum stack size depends on the item type.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if the requested slot number is greater than the inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn get_slot_max_stack_size(
 		&mut self,
 		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<Option<NonZeroU32>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = self
-			.call_check_invalid_slots("getSlotMaxStackSize", &TwoValues(side, slot))
-			.await?;
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getSlotMaxStackSize",
+				Some(&TwoValues(side, slot)),
+			)
+			.await,
+		)?;
 		Ok(NonZeroU32::new(ret.0))
 	}
 
@@ -171,11 +186,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// of different numbers of the same item are considered equal.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if either of the requested slot numbers is greater than the inventory
-	///   size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn compare_stacks(
 		&mut self,
 		side: impl Side,
@@ -184,12 +197,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		check_nbt: bool,
 	) -> Result<bool, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = self
-			.call_check_invalid_slots(
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
 				"compareStacks",
-				&FourValues(side, slot_a, slot_b, check_nbt),
+				Some(&FourValues(side, slot_a, slot_b, check_nbt)),
 			)
-			.await?;
+			.await,
+		)?;
 		Ok(ret.0)
 	}
 
@@ -203,11 +220,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// dictionary “ore ID” entry in common.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if either of the requested slot numbers is greater than the inventory
-	///   size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn are_stacks_equivalent(
 		&mut self,
 		side: impl Side,
@@ -215,9 +230,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		slot_b: NonZeroU32,
 	) -> Result<bool, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = self
-			.call_check_invalid_slots("areStacksEquivalent", &ThreeValues(side, slot_a, slot_b))
-			.await?;
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"areStacksEquivalent",
+				Some(&ThreeValues(side, slot_a, slot_b)),
+			)
+			.await,
+		)?;
 		Ok(ret.0)
 	}
 
@@ -230,18 +252,18 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// scratch buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, if the requested slot number is greater than the inventory size, or if
-	///   reading full item information is disabled in the configuration file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
+	///   config file.
 	pub async fn get_stack_in_slot(
 		self,
 		side: impl Side,
 		slot: NonZeroU32,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let side: u8 = side.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -249,29 +271,31 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"getStackInSlot",
 				Some(&TwoValues(side, slot)),
 			)
-			.await;
-		Ok(Self::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns a snapshot of all the item stacks in an inventory.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if reading full item information is disabled in the configuration
-	///   file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
+	///   config file.
 	pub async fn get_all_stacks(&mut self, side: impl Side) -> Result<Snapshot, Error> {
 		let side: u8 = side.into();
-		let ret: NullAndStringOr<'_, OneValue<descriptor::Decoded>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getAllStacks",
-			Some(&OneValue(side)),
-		)
-		.await?;
-		let descriptor = ret.into_result()?.0;
+		let ret: OneValue<descriptor::Decoded> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getAllStacks",
+				Some(&OneValue(side)),
+			)
+			.await,
+		)?;
+		let descriptor = ret.0;
 		// SAFETY: This descriptor was just generated by the getAllStacks() method call, so it must
 		// be fresh and unique.
 		let descriptor = unsafe { descriptor.into_owned() };
@@ -286,22 +310,23 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if reading full item information is disabled in the configuration
-	///   file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
+	///   config file.
 	pub async fn get_inventory_name(self, side: impl Side) -> Result<&'buffer str, Error> {
 		let side: u8 = side.into();
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getInventoryName",
-			Some(&OneValue(side)),
-		)
-		.await?;
-		Ok(ret.into_result()?.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getInventoryName",
+				Some(&OneValue(side)),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	// InventoryTransfer
@@ -320,10 +345,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// actually moved is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a transposer.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
-	///   the specified sides, or if there is not enough energy to perform the operation.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn transfer_item<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -332,7 +356,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -340,8 +364,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"transferItem",
 				Some(&ThreeValues(source, sink, count)),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Moves items between two inventories, taking from only a specific slot in the source.
@@ -357,11 +382,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The number of items actually moved is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a transposer.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
-	///   the specified sides, if the requested slot number is greater than the inventory size, or
-	///   if there is not enough energy to perform the operation.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn transfer_item_from_slot<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -371,7 +395,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -379,8 +403,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"transferItem",
 				Some(&FourValues(source, sink, count, source_slot.get())),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Moves items between two inventories, taking from only a specific slot in the source and
@@ -393,11 +418,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// parameter ranges from 1 to the sink inventory size.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a transposer.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on one of
-	///   the specified sides, if a requested slot number is greater than the corresponding
-	///   inventory size, or if there is not enough energy to perform the operation.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn transfer_item_from_slot_to_slot<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -408,7 +432,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -422,8 +446,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 					sink_slot.get(),
 				)),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid slot")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Moves fluids between two tanks.
@@ -431,11 +456,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `count` value indicates the maximum number of millibuckets to move. The number of
 	/// millibuckets moved is returned.
 	///
+	/// If there is no fluid tank in one of the positions, or if one of the positions is in an
+	/// unloaded chunk, `Ok(0)` is returned. OpenComputers does not consider this to be an error.
+	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a transposer.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible fluid tank on one of
-	///   the specified sides, or if there is not enough energy to perform the operation.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn transfer_fluid<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -444,7 +470,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: Result<NullAndStringOr<'_, TwoValues<bool, u32>>, oc_wasm_safe::error::Error> =
+		let ret: TwoValues<bool, u32> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -452,8 +478,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"transferFluid",
 				Some(&ThreeValues(source, sink, count)),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.1)
+			.await,
+		)?;
+		Ok(ret.1)
 	}
 
 	// WorldTankAnalytics
@@ -463,17 +490,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `tank` parameter ranges from 1 to the number of tanks in the target block.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor a tank controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible tank on the specified
-	///   side or if the requested tank number is greater than the number of tanks.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn get_tank_level(
 		&mut self,
 		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -481,8 +507,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"getTankLevel",
 				Some(&TwoValues(side, tank.get())),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the amount of fluid a tank can hold, in millibuckets.
@@ -490,17 +517,16 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `tank` parameter ranges from 1 to the number of tanks in the target block.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor a tank controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible tank on the specified
-	///   side or if the requested tank number is greater than the number of tanks.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn get_tank_capacity(
 		&mut self,
 		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, oc_wasm_safe::error::Error> =
+		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -508,8 +534,9 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"getTankCapacity",
 				Some(&TwoValues(side, tank.get())),
 			)
-			.await;
-		Ok(Locked::unpack_bad_parameters_with_message(ret, "invalid tank")?.0)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the fluid in a tank.
@@ -517,29 +544,27 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// The `tank` parameter ranges from 1 to the number of tanks in the target block.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor a tank controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible tank on the specified
-	///   side, if the requested tank number is greater than the number of tanks, or if reading
-	///   full item information is disabled in the configuration file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
+	///   config file.
 	pub async fn get_fluid_in_tank(
 		self,
 		side: impl Side,
 		tank: NonZeroU32,
 	) -> Result<Option<FluidInTank<'buffer>>, Error> {
 		let side: u8 = side.into();
-		let ret: Result<
-			NullAndStringOr<'_, OneValue<OptionFluidInTank<'buffer>>>,
-			oc_wasm_safe::error::Error,
-		> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInTank",
-			Some(&TwoValues(side, tank.get())),
-		)
-		.await;
-		let ret = Self::unpack_bad_parameters_with_message(ret, "invalid tank")?;
+		let ret: OneValue<OptionFluidInTank<'buffer>> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInTank",
+				Some(&TwoValues(side, tank.get())),
+			)
+			.await,
+		)?;
 		Ok(ret.0 .0)
 	}
 
@@ -549,24 +574,26 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// method, the tanks are returned in a vector which is obviously 0-indexed.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor a tank controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible tank on the specified
-	///   side or if reading full item information is disabled in the configuration file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
+	///   config file.
 	pub async fn get_fluids_in_tanks(
 		self,
 		side: impl Side,
 	) -> Result<Vec<Option<FluidInTank<'buffer>>>, Error> {
 		let side: u8 = side.into();
-		let ret: NullAndStringOr<'_, OneValue<GetFluidsInTanksResult<'buffer>>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInTank",
-			Some(&OneValue(side)),
-		)
-		.await?;
-		Ok(ret.into_result()?.0 .0)
+		let ret: OneValue<GetFluidsInTanksResult<'buffer>> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInTank",
+				Some(&OneValue(side)),
+			)
+			.await,
+		)?;
+		Ok(ret.0 .0)
 	}
 
 	// TankInventoryControl
@@ -576,87 +603,64 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///
 	/// The `slot` parameter ranges from 1 to the internal inventory size.
 	///
-	/// If the slot does not contain a fluid container (either because it contains a
-	/// non-fluid-container item or because it does not contain anything), `None` is returned. If
-	/// the slot contains an empty fluid container, `Some(0)` is returned.
-	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
-	pub async fn get_tank_level_in_slot(&mut self, slot: NonZeroU32) -> Result<Option<u32>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getTankLevelInSlot",
-			Some(&OneValue(slot.get())),
-		)
-		.await?;
-		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
-		// an actual error.
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`BadItem`](Error::BadItem)
+	pub async fn get_tank_level_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getTankLevelInSlot",
+				Some(&OneValue(slot.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the amount of fluid in the fluid container in the currently selected slot of the
 	/// robot or drone’s internal inventory.
 	///
-	/// If the slot does not contain a fluid container (either because it contains a
-	/// non-fluid-container item or because it does not contain anything), `None` is returned. If
-	/// the slot contains an empty fluid container, `Some(0)` is returned.
-	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<Option<u32>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getTankLevelInSlot",
-			None,
-		)
-		.await?;
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem)
+	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<u32, Error> {
+		let ret: OneValue<_> = Self::map_errors(
+			component_method::<(), _>(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getTankLevelInSlot",
+				None,
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the total size of a fluid container in the robot or drone’s internal inventory.
 	///
 	/// The `slot` parameter ranges from 1 to the internal inventory size.
 	///
-	/// If the slot does not contain a fluid container (either because it contains a
-	/// non-fluid-container item or because it does not contain anything), `None` is returned.
-	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
-	pub async fn get_tank_capacity_in_slot(
-		&mut self,
-		slot: NonZeroU32,
-	) -> Result<Option<u32>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getTankCapacityInSlot",
-			Some(&OneValue(slot.get())),
-		)
-		.await?;
-		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
-		// an actual error.
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`BadItem`](Error::BadItem)
+	pub async fn get_tank_capacity_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getTankCapacityInSlot",
+				Some(&OneValue(slot.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the total size of the fluid container in the currently selected slot of the robot
@@ -666,21 +670,20 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// non-fluid-container item or because it does not contain anything), `None` is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<Option<u32>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getTankCapacityInSlot",
-			None,
-		)
-		.await?;
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(Some(n.0)),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem)
+	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<u32, Error> {
+		let ret: OneValue<_> = Self::map_errors(
+			component_method::<(), _>(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getTankCapacityInSlot",
+				None,
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns information about the fluid in a fluid container in the robot or drone’s internal
@@ -688,58 +691,51 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///
 	/// The `slot` parameter ranges from 1 to the internal inventory size.
 	///
-	/// If the slot does not contain fluid (either because it contains a non-fluid-container item,
-	/// because it does not contain anything, or because it contains a fluid container item without
-	/// any fluid), `None` is returned.
+	/// If the slot contains an empty fluid container, `None` is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`BadItem`](Error::BadItem)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_slot(
 		self,
 		slot: NonZeroU32,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInTankInSlot",
-			Some(&OneValue(slot.get())),
-		)
-		.await?;
-		// Not-a-container is returned as (nil, string). Not-a-valid-inventory-slot is returned as
-		// an actual error. Empty container as returned as (nil) without a string.
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(n.0),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInTankInSlot",
+				Some(&OneValue(slot.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns information about the fluid in the fluid container in the selected slot of the
 	/// robot or drone’s internal inventory.
 	///
-	/// If the slot does not contain fluid (either because it contains a non-fluid-container item,
-	/// because it does not contain anything, or because it contains a fluid container item without
-	/// any fluid), `None` is returned.
+	/// If the slot contains an empty fluid container, `None` is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`BadItem`](Error::BadItem)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_selected_slot(self) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInTankInSlot",
-			None,
-		)
-		.await?;
-		match ret {
-			NullAndStringOr::Ok(n) => Ok(n.0),
-			NullAndStringOr::Err(_) => Ok(None),
-		}
+		let ret: OneValue<_> = Self::map_errors(
+			component_method::<(), _>(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInTankInSlot",
+				None,
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns information about the fluid in the robot or drone’s specified internal tank.
@@ -747,23 +743,24 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the tank is empty, `None` is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the specified tank number is greater than the
-	///   number of internal tanks in the robot or drone.
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_internal_tank(
 		self,
 		tank: NonZeroU32,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		Ok(component_method::<_, OneValue<_>>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInInternalTank",
-			Some(&OneValue(tank.get())),
-		)
-		.await?
-		.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInInternalTank",
+				Some(&OneValue(tank.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns information about the fluid in the robot or drone’s currently selected internal
@@ -772,20 +769,23 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the tank is empty, `None` is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_selected_internal_tank(
 		self,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		Ok(component_method::<(), OneValue<_>>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getFluidInInternalTank",
-			None,
-		)
-		.await?
-		.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method::<(), _>(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getFluidInInternalTank",
+				None,
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Moves fluid from a fluid container in the robot or drone’s currently selected inventory
@@ -795,14 +795,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// this may be larger than `amount`.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
-	///   selected internal tank is full, the selected item is not a container, the source
-	///   container is empty, the internal tank and source container contain different types of
-	///   fluid, or the source container cannot be partly drained (e.g. a bucket) and the complete
-	///   amount cannot be moved (either because `amount` is too small or because there is not
-	///   enough space in the destination tank).
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the item is not a fluid container, if there is
+	///   no item in the selected slot, if there is no inventory, or in some cases if the item is
+	///   empty.
+	/// * [`Failed`](Error::Failed) is returned in some cases if the item is empty.
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
 	pub async fn drain(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
 		self.drain_or_fill(amount, "drain").await
 	}
@@ -813,14 +812,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// On success, the amount of fluid moved is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the robot does not contain any tanks, the
-	///   selected internal tank is empty, the selected item is not a container, the destination
-	///   container is full, the internal tank and destination container contain different types of
-	///   fluid, or the destination container cannot be partly filled (e.g. a bucket) and the
-	///   complete amount cannot be moved (either because `amount` is too small or because there is
-	///   not enough fluid in the source tank).
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem) is returned if the item is not a fluid container, if there is
+	///   no item in the selected slot, if there is no inventory, or in some cases if the item is
+	///   full.
+	/// * [`Failed`](Error::Failed) is returned if the tank is empty, if the item contains a fluid
+	///   that cannot be mixed with the fluid in the tank, or in some cases if the item is full.
+	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
 	pub async fn fill(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
 		self.drain_or_fill(amount, "fill").await
 	}
@@ -836,24 +834,24 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// scratch buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not an inventory controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size, or if reading full item information is disabled in the configuration
-	///   file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_stack_in_internal_slot(
 		self,
 		slot: NonZeroU32,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getStackInInternalSlot",
-			Some(&OneValue(slot)),
-		)
-		.await?;
-		Ok(ret.into_result()?.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getStackInInternalSlot",
+				Some(&OneValue(slot)),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the item stack in the robot or drone’s currently selected internal inventory slot.
@@ -862,22 +860,22 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// scratch buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not an inventory controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if reading full item information is disabled in the
-	///   configuration file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_stack_in_selected_internal_slot(
 		self,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"getStackInInternalSlot",
-			None,
-		)
-		.await?;
-		Ok(ret.into_result()?.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method::<(), _>(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"getStackInInternalSlot",
+				None,
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Checks whether a robot or drone’s internal inventory slot contains an
@@ -891,20 +889,20 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// dictionary “ore ID” entry in common.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn is_equivalent_to(&mut self, slot: NonZeroU32) -> Result<bool, Error> {
-		Ok(component_method::<_, OneValue<_>>(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"isEquivalentTo",
-			Some(&OneValue(slot.get())),
-		)
-		.await?
-		.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"isEquivalentTo",
+				Some(&OneValue(slot.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.0)
 	}
 
 	// InventoryWorldControlMk2
@@ -916,12 +914,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// of the destination location to look for inventory slots.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not an inventory controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on
-	///   face `face` of the block on side `side`), if `slot` is greater than the number of slots
-	///   in the external inventory, if there are no items in the currently selected slot, or if
-	///   the destination slot is full or contains an item of a different type.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on face
+	///   `face` of the block on side `side`) or if there are no items in the currently selected
+	///   slot.
 	pub async fn drop_into_slot(
 		&mut self,
 		side: ActionSide,
@@ -931,7 +929,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	) -> Result<(), Error> {
 		let side = u8::from(side);
 		let slot = slot.get();
-		let ret: NullAndStringOr<'_, OneValue<bool>> = if let Some(f) = face {
+		let ret: TwoValues<bool, Option<&str>> = Self::map_errors(if let Some(f) = face {
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -949,11 +947,11 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&ThreeValues(side, slot, count)),
 			)
 			.await
-		}?;
-		if ret.into_result()?.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("drop failed".to_owned()))
+		})?;
+		match ret {
+			TwoValues(true, _) => Ok(()),
+			TwoValues(false, Some("inventory full/invalid slot")) => Err(Error::InventoryFull),
+			TwoValues(false, _) => Err(Error::Failed),
 		}
 	}
 
@@ -975,8 +973,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// in the robot.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not an inventory controller upgrade installed in a robot or drone.
+	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on face
 	///   `face` of the block on side `side`), or if `slot` is greater than the number of slots in
 	///   the external inventory.
@@ -992,7 +989,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			fn decode(d: &mut Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
 				if d.datatype()? == minicbor::data::Type::Bool {
 					if d.bool()? {
-						Err(minicbor::decode::Error::Message(
+						Err(minicbor::decode::Error::message(
 							"expected only false, not true",
 						))
 					} else {
@@ -1005,7 +1002,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		}
 		let side = u8::from(side);
 		let slot = slot.get();
-		let ret: NullAndStringOr<'_, OneValue<FalseOrU32>> = if let Some(f) = face {
+		let ret: OneValue<FalseOrU32> = Self::map_errors(if let Some(f) = face {
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -1023,53 +1020,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				Some(&ThreeValues(side, slot, count)),
 			)
 			.await
-		}?;
-		Ok(ret.into_result()?.0 .0)
-	}
-
-	/// Makes a method call that accepts one or more slot parameters and converts a
-	/// [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) error into a failure due to
-	/// invalid slot number.
-	///
-	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if there is not an accessible inventory on the
-	///   specified side, or if either of the requested slot numbers is greater than the inventory
-	///   size.
-	async fn call_check_invalid_slots<'retval, Params: Encode, Return: Decode<'retval>>(
-		&'retval mut self,
-		method: &str,
-		params: &Params,
-	) -> Result<Return, Error> {
-		let ret: Result<NullAndStringOr<'_, Return>, oc_wasm_safe::error::Error> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				method,
-				Some(&params),
-			)
-			.await;
-		Locked::unpack_bad_parameters_with_message(ret, "invalid slot")
-	}
-
-	/// Converts a [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) into
-	/// [`Failed`](Error::Failed) with a specified message, converts all other syscall errors into
-	/// [`BadComponent`](Error::BadComponent), and unwraps a [`NullAndStringOr`](NullAndStringOr)
-	/// into a [`Failed`](Error::Failed) or its contents.
-	fn unpack_bad_parameters_with_message<T: Decode<'buffer>>(
-		value: Result<NullAndStringOr<'buffer, T>, oc_wasm_safe::error::Error>,
-		bad_parameters_message: &str,
-	) -> Result<T, Error> {
-		match value {
-			Ok(NullAndStringOr::Ok(v)) => Ok(v),
-			Ok(NullAndStringOr::Err(e)) => Err(Error::Failed(e.to_owned())),
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				Err(Error::Failed(bad_parameters_message.to_owned()))
-			}
-			Err(e) => Err(e.into()),
-		}
+		})?;
+		Ok(ret.0 .0)
 	}
 
 	/// Implements the `drain` and `fill` functions.
@@ -1077,21 +1029,102 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// On success, the amount of fluid moved is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   not a tank controller upgrade installed in a robot or drone.
-	/// * [`Failed`](Error::Failed) is returned if the operation failed.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadItem`](Error::BadItem)
+	/// * [`Failed`](Error::Failed) is returned if the tank is empty (for a fill operation) or full
+	///   (for a drain operation), or if the destination contains a fluid that cannot be mixed with
+	///   the fluid being moved.
+	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
 	async fn drain_or_fill(&mut self, amount: NonZeroU32, method: &str) -> Result<u32, Error> {
-		let ret: NullAndStringOr<'_, TwoValues<bool, u32>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			method,
-			Some(&OneValue(amount.get())),
-		)
-		.await?;
-		match ret {
-			NullAndStringOr::Ok(x) => Ok(x.1),
-			NullAndStringOr::Err(e) => Err(Error::Failed(e.to_owned())),
+		let ret: TwoValues<bool, u32> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				method,
+				Some(&OneValue(amount.get())),
+			)
+			.await,
+		)?;
+		Ok(ret.1)
+	}
+
+	/// Given a `Result<NullAndStringOr<T>, MethodCallError>`, maps the errors (both exceptions and
+	/// null-and-string-style errors) to appropriate error constants, returning any success object
+	/// unmodified.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`BadItem`](Error::BadItem)
+	/// * [`Failed`](Error::Failed)
+	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`Unsupported`](Error::Unsupported)
+	fn map_errors<T>(x: Result<NullAndStringOr<'_, T>, MethodCallError<'_>>) -> Result<T, Error> {
+		const INCOMPATIBLE_FLUID: &str = "incompatible fluid";
+		const INCOMPATIBLE_OR_NO_FLUID: &str = "incompatible or no fluid";
+		const INVALID_SLOT: &str = "invalid slot";
+		const INVALID_TANK_INDEX: &str = "invalid tank index";
+		const ITEM_IS_EMPTY_OR_NOT_A_FLUID_CONTAINER: &str =
+			"item is empty or not a fluid container";
+		const ITEM_IS_FULL_OR_NOT_A_FLUID_CONTAINER: &str = "item is full or not a fluid container";
+		const ITEM_IS_NOT_A_FLUID_CONTAINER: &str = "item is not a fluid container";
+		const NO_INVENTORY: &str = "no inventory";
+		const NO_TANK: &str = "no tank";
+		const NOT_ENOUGH_ENERGY: &str = "not enough energy";
+		const NOT_ENABLED_IN_CONFIG: &str = "not enabled in config";
+		const TANK_IS_EMPTY: &str = "tank is empty";
+		const TANK_IS_FULL: &str = "tank is full";
+		const UNKNOWN: &str = "Unknown";
+		const ERROR_MESSAGE_BUFFER_SIZE: usize = max_of_usizes(&[
+			INCOMPATIBLE_FLUID.len(),
+			INCOMPATIBLE_OR_NO_FLUID.len(),
+			INVALID_SLOT.len(),
+			INVALID_TANK_INDEX.len(),
+			ITEM_IS_EMPTY_OR_NOT_A_FLUID_CONTAINER.len(),
+			ITEM_IS_FULL_OR_NOT_A_FLUID_CONTAINER.len(),
+			ITEM_IS_NOT_A_FLUID_CONTAINER.len(),
+			NO_INVENTORY.len(),
+			NO_TANK.len(),
+			NOT_ENOUGH_ENERGY.len(),
+			NOT_ENABLED_IN_CONFIG.len(),
+			TANK_IS_FULL.len(),
+			UNKNOWN.len(),
+		]);
+		match x {
+			Ok(NullAndStringOr::Ok(x)) => Ok(x),
+			Ok(NullAndStringOr::Err(
+				INCOMPATIBLE_FLUID | INCOMPATIBLE_OR_NO_FLUID | TANK_IS_EMPTY,
+			)) => Err(Error::Failed),
+			Ok(NullAndStringOr::Err(INVALID_SLOT | INVALID_TANK_INDEX)) => {
+				Err(Error::BadInventorySlot)
+			}
+			Ok(NullAndStringOr::Err(
+				ITEM_IS_EMPTY_OR_NOT_A_FLUID_CONTAINER
+				| ITEM_IS_FULL_OR_NOT_A_FLUID_CONTAINER
+				| ITEM_IS_NOT_A_FLUID_CONTAINER,
+			)) => Err(Error::BadItem),
+			Ok(NullAndStringOr::Err(NO_INVENTORY | NO_TANK | UNKNOWN)) => Err(Error::NoInventory),
+			Ok(NullAndStringOr::Err(NOT_ENOUGH_ENERGY)) => Err(Error::NotEnoughEnergy),
+			Ok(NullAndStringOr::Err(NOT_ENABLED_IN_CONFIG)) => Err(Error::Unsupported),
+			Ok(NullAndStringOr::Err(TANK_IS_FULL)) => Err(Error::InventoryFull),
+			Ok(NullAndStringOr::Err(_)) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+			}
+			Err(MethodCallError::BadParameters(exception)) => {
+				let mut buffer = [0_u8; ERROR_MESSAGE_BUFFER_SIZE];
+				match exception.message(&mut buffer) {
+					Ok(INVALID_SLOT | INVALID_TANK_INDEX) => Err(Error::BadInventorySlot),
+					Ok(NO_INVENTORY | NO_TANK | UNKNOWN) => Err(Error::NoInventory),
+					Ok(NOT_ENOUGH_ENERGY) => Err(Error::NotEnoughEnergy),
+					Ok(NOT_ENABLED_IN_CONFIG) => Err(Error::Unsupported),
+					_ => Err(Error::BadComponent(
+						oc_wasm_safe::error::Error::BadParameters,
+					)),
+				}
+			}
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 }
@@ -1132,7 +1165,8 @@ impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let len = d.map()?
+			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		let mut name: Option<&'buffer str> = None;
 		let mut label: Option<&'buffer str> = None;
 		let mut size: Option<u32> = None;
@@ -1150,7 +1184,7 @@ impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
 				"damage" => damage = Some(d.u32()?),
 				"maxDamage" => max_damage = Some(d.u32()?),
 				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::Message("")),
+				_ => return Err(minicbor::decode::Error::message("")),
 			}
 		}
 		if let Some(name) = name {
@@ -1176,7 +1210,7 @@ impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
 				}
 			}
 		}
-		Err(minicbor::decode::Error::Message(""))
+		Err(minicbor::decode::Error::message(""))
 	}
 }
 
@@ -1226,12 +1260,12 @@ impl<'buffer> Decode<'buffer> for GetAllResult<'buffer> {
 		let len = d.map()?;
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let len = len.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let len = len.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		let mut ret = Vec::with_capacity(len);
 		for _ in 0..len {
 			let index = d.u32()?;
 			if index as usize != ret.len() + 1 {
-				return Err(minicbor::decode::Error::Message(""));
+				return Err(minicbor::decode::Error::message(""));
 			}
 			ret.push(d.decode::<ItemStack<'buffer>>()?);
 		}
@@ -1286,9 +1320,9 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// scratch buffer. Consequently, the `LockedSnapshot` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if iteration has reached the end of the slots.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot) is returned if iteration has reached the
+	///   end of the slots.
 	pub async fn next(self) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: Vec<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value::<(), _, _>(
 			self.invoker,
@@ -1303,7 +1337,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 			Ok(elt.0)
 		} else {
 			// Return value list was of length zero → slot does not exist.
-			Err(Error::Failed("invalid slot".to_owned()))
+			Err(Error::BadInventorySlot)
 		}
 	}
 
@@ -1319,10 +1353,8 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// scratch buffer. Consequently, the `LockedSnapshot` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
-	/// * [`Failed`](Error::Failed) is returned if the requested slot number is greater than the
-	///   inventory size.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn get(self, slot: NonZeroU32) -> Result<ItemStack<'buffer>, Error> {
 		let ret: OneValue<Option<_>> = oc_wasm_futures::invoke::value_indexed_read(
 			self.invoker,
@@ -1334,15 +1366,14 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 		if let Some(stack) = ret.0 {
 			Ok(stack)
 		} else {
-			Err(Error::Failed("invalid slot".to_owned()))
+			Err(Error::BadInventorySlot)
 		}
 	}
 
 	/// Rewinds the iterator over slots used by [`next`](Self::next).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn reset(&mut self) -> Result<(), Error> {
 		value_method::<(), Ignore, _>(self.invoker, self.buffer, &self.descriptor, "reset", None)
 			.await?;
@@ -1355,8 +1386,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// and [`reset`](Self::reset).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn count(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> =
 			value_method::<(), _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
@@ -1375,8 +1405,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// scratch buffer. Consequently, the `LockedSnapshot` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the component does not exist or is
-	///   neither a transposer nor an inventory controller upgrade.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_all(self) -> Result<Vec<ItemStack<'buffer>>, Error> {
 		let ret: OneValue<GetAllResult<'buffer>> =
 			value_method::<(), _, _>(self.invoker, self.buffer, &self.descriptor, "getAll", None)
@@ -1415,7 +1444,8 @@ impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let len = d.map()?
+			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		let mut name: Option<_> = None;
 		let mut label: Option<_> = None;
 		let mut amount: Option<_> = None;
@@ -1429,7 +1459,7 @@ impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 				"amount" => amount = Some(d.u32()?),
 				"capacity" => capacity = Some(d.u32()?),
 				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::Message("")),
+				_ => return Err(minicbor::decode::Error::message("")),
 			}
 		}
 		if let Some(name) = name {
@@ -1449,7 +1479,7 @@ impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
 				}
 			}
 		}
-		Err(minicbor::decode::Error::Message(""))
+		Err(minicbor::decode::Error::message(""))
 	}
 }
 
@@ -1480,7 +1510,8 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let len = d.map()?
+			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		let mut name: Option<_> = None;
 		let mut label: Option<_> = None;
 		let mut amount: Option<_> = None;
@@ -1492,7 +1523,7 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 				"label" => label = Some(d.str()?),
 				"amount" => amount = Some(d.u32()?),
 				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::Message("")),
+				_ => return Err(minicbor::decode::Error::message("")),
 			}
 		}
 		if let Some(name) = name {
@@ -1509,7 +1540,7 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 				}
 			}
 		}
-		Err(minicbor::decode::Error::Message(""))
+		Err(minicbor::decode::Error::message(""))
 	}
 }
 
@@ -1574,7 +1605,7 @@ impl<'buffer> Decode<'buffer> for OptionFluidInTank<'buffer> {
 				}
 			} else {
 				// Map of indefinite length. OC-Wasm never writes indefinite-length items.
-				Err(minicbor::decode::Error::Message(""))
+				Err(minicbor::decode::Error::message(""))
 			}
 		}
 	}
@@ -1594,7 +1625,7 @@ impl<'buffer> Decode<'buffer> for GetFluidsInTanksResult<'buffer> {
 		let len = d.array()?;
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
-		let len = len.ok_or(minicbor::decode::Error::Message(""))? as usize;
+		let len = len.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		let mut ret = Vec::with_capacity(len);
 		for _ in 0..len {
 			ret.push(d.decode::<OptionFluidInTank<'buffer>>()?.0);

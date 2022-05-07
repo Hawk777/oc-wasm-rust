@@ -2,12 +2,14 @@
 
 use crate::common::Lockable;
 use crate::error::Error;
-use crate::helpers::{Ignore, OneOptionalValue, OneValue, TwoValues};
-use alloc::borrow::ToOwned;
+use crate::helpers::{max_usize, Ignore, OneOptionalValue, OneValue, TwoValues};
 use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::component_method;
-use oc_wasm_safe::{component::Invoker, descriptor, Address};
+use oc_wasm_safe::{
+	component::{Invoker, MethodCallError},
+	descriptor, Address,
+};
 
 /// The type name for filesystem components.
 pub const TYPE: &str = "filesystem";
@@ -74,8 +76,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_label(self) -> Result<Option<&'buffer str>, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
@@ -89,12 +90,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the drive does not support labels or if the
-	///   label cannot be changed.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`StorageReadOnly`](Error::StorageReadOnly) is returned if this filesystem has a label
+	///   that cannot be changed.
+	/// * [`Unsupported`](Error::Unsupported) is returned if this filesystem does not support
+	///   labels.
 	pub async fn set_label(self, label: Option<&str>) -> Result<Option<&'buffer str>, Error> {
-		let ret: Result<OneValue<_>, oc_wasm_safe::error::Error> = component_method(
+		let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -102,20 +104,18 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 			Some(&OneValue(label)),
 		)
 		.await;
-		if let Err(oc_wasm_safe::error::Error::BadParameters) = ret {
-			// This is returned if the filesystem has a label but the label cannot be modified, as
-			// happens for a tmpfs.
-			Err(Error::Failed("label read only".to_owned()))
-		} else {
-			Ok(ret?.0)
+		match ret {
+			Ok(OneValue(label)) => Ok(label),
+			Err(MethodCallError::BadParameters(_)) => Err(Error::StorageReadOnly),
+			Err(MethodCallError::Other(_)) => Err(Error::Unsupported),
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 
 	/// Returns whether the filesystem is read-only.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_read_only(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isReadOnly", None)
@@ -126,8 +126,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the total capacity of the filesystem, in bytes.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_space_total(&mut self) -> Result<u64, Error> {
 		// The component call returns a u64 if the filesystem has a capacity limit, or an f64 equal
 		// to infinity if it doesn’t.
@@ -159,8 +158,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the size of all files the filesystem, in bytes.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_space_used(&mut self) -> Result<u64, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "spaceUsed", None)
@@ -171,8 +169,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns whether a file or directory of the given name exists.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	pub async fn exists(&mut self, path: &str) -> Result<bool, Error> {
 		self.call_path_to_value("exists", path).await
 	}
@@ -182,8 +180,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// If the path does not exist or is a directory, zero is returned.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	pub async fn size(&mut self, path: &str) -> Result<u64, Error> {
 		self.call_path_to_value("size", path).await
 	}
@@ -191,8 +189,8 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns whether a path refers to an existing directory.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	pub async fn is_directory(&mut self, path: &str) -> Result<bool, Error> {
 		self.call_path_to_value("isDirectory", path).await
 	}
@@ -204,105 +202,107 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// filesystems which do not track modification times, such as virtual filesystems.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	pub async fn last_modified(&mut self, path: &str) -> Result<u64, Error> {
 		self.call_path_to_value("lastModified", path).await
 	}
 
 	/// Returns the objects contained within a directory.
 	///
+	/// If the name refers to a file rather than a directory, a single entry is returned specifying
+	/// the file itself.
+	///
 	/// The returned string slices point into, and therefore retain ownership of, the scratch
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the path does not exist or is a file.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`FileNotFound`](Error::FileNotFound)
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
-		let ret: OneOptionalValue<Vec<DirectoryEntry<'buffer>>> = component_method(
+		let ret: Result<OneOptionalValue<Vec<DirectoryEntry<'buffer>>>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"list",
 			Some(&OneValue(path)),
 		)
-		.await?;
-		if let Some(ret) = ret.0 {
-			Ok(ret)
-		} else {
-			Err(Error::Failed("no such directory".to_owned()))
+		.await;
+		match ret {
+			Ok(OneOptionalValue(Some(listing))) => Ok(listing),
+			Ok(OneOptionalValue(None)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 
 	/// Creates a directory and, if missing, its parents.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	/// * [`Failed`](Error::Failed) is returned if the target directory already exists, or if a
-	///   directory on the path cannot be created (typically due to lack of space or due to an
-	///   intermediate path component being an existing file).
+	///   directory on the path cannot be created (typically due to lack of space, an intermediate
+	///   path component being an existing file, or the filesystem being read-only).
 	pub async fn make_directory(&mut self, path: &str) -> Result<(), Error> {
-		let created: bool = self.call_path_to_value("makeDirectory", path).await?;
-		if created {
+		let ret: bool = self.call_path_to_value("makeDirectory", path).await?;
+		if ret {
 			Ok(())
 		} else {
-			Err(Error::Failed("could not create directory".to_owned()))
+			Err(Error::Failed)
 		}
 	}
 
 	/// Removes a file or directory and its contents.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	/// * [`Failed`](Error::Failed) is returned if the removal fails (typically due to the path not
-	///   existing).
+	///   existing or the filesystem being read-only).
 	pub async fn remove(&mut self, path: &str) -> Result<(), Error> {
 		let removed: bool = self.call_path_to_value("remove", path).await?;
 		if removed {
 			Ok(())
 		} else {
-			Err(Error::Failed("delete failed".to_owned()))
+			Err(Error::Failed)
 		}
 	}
 
 	/// Renames a file or directory.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	/// * [`Failed`](Error::Failed) is returned if the rename fails (typically due to the source
 	///   path not existing, the destination path existing and being of a different type than the
-	///   source, or the destination being a non-empty directory).
+	///   source, the destination being a non-empty directory, or the filesystem being read-only).
 	pub async fn rename(&mut self, source: &str, destination: &str) -> Result<(), Error> {
-		let renamed: OneValue<bool> = component_method(
+		let ret: Result<OneValue<bool>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"rename",
 			Some(&TwoValues(source, destination)),
 		)
-		.await?;
-		if renamed.0 {
-			Ok(())
-		} else {
-			Err(Error::Failed("rename failed".to_owned()))
+		.await;
+		match ret {
+			Ok(OneValue(true)) => Ok(()),
+			Ok(OneValue(false)) => Err(Error::Failed),
+			Err(MethodCallError::Other(_)) => Err(Error::BadFilename),
+			Err(e) => Err(e.into()),
 		}
 	}
 
 	/// Opens a file in read mode.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the path does not exist or is a directory or if
-	///   there are too many open files.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`FileNotFound`](Error::FileNotFound)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn open_read(&mut self, path: &str) -> Result<ReadHandle, Error> {
 		Ok(ReadHandle {
 			address: self.address,
-			descriptor: self.call_open(path, "r").await?,
+			descriptor: self.call_open(path, "r", Error::FileNotFound).await?,
 		})
 	}
 
@@ -311,12 +311,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
 	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the path is a directory, if the parent of the
-	///   path is not a directory, or if there are too many open files.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
+	/// * [`Failed`](Error::Failed) is returned if the path is a directory, the parent of the path
+	///   is not a directory, or the filesystem is read-only.
 	pub async fn open_write(&mut self, path: &str, mode: WriteMode) -> Result<WriteHandle, Error> {
 		Ok(WriteHandle {
 			address: self.address,
-			descriptor: self.call_open(path, mode.as_str()).await?,
+			descriptor: self.call_open(path, mode.as_str(), Error::Failed).await?,
 		})
 	}
 
@@ -324,31 +325,40 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// that does not borrow from the buffer.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`BadFilename`](Error::BadFilename)
 	async fn call_path_to_value<T>(&mut self, method: &str, path: &str) -> Result<T, Error>
 	where
 		for<'a> T: Decode<'a>,
 	{
-		let ret: OneValue<T> = component_method(
+		let ret: Result<OneValue<T>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			method,
 			Some(&OneValue(path)),
 		)
-		.await?;
-		Ok(ret.0)
+		.await;
+		match ret {
+			Ok(OneValue(v)) => Ok(v),
+			Err(MethodCallError::Other(_)) => Err(Error::BadFilename),
+			Err(e) => Err(e.into()),
+		}
 	}
 
 	/// Performs an `open` method call.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the method fails.
-	async fn call_open(&mut self, path: &str, mode: &str) -> Result<descriptor::Owned, Error> {
-		let descriptor: Result<OneValue<descriptor::Decoded>, oc_wasm_safe::error::Error> =
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
+	/// * The error passed in `file_not_found_error`
+	async fn call_open(
+		&mut self,
+		path: &str,
+		mode: &str,
+		file_not_found_error: Error,
+	) -> Result<descriptor::Owned, Error> {
+		let descriptor: Result<OneValue<descriptor::Decoded>, MethodCallError<'_>> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -363,7 +373,27 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				// be fresh and unique.
 				unsafe { descriptor.into_owned() },
 			),
-			Err(oc_wasm_safe::error::Error::Other) => Err(Error::Failed("open failed".to_owned())),
+			Err(MethodCallError::Other(exception)) => {
+				if exception.is_type("java.io.FileNotFoundException") {
+					// FileNotFoundException is raised for almost everything.
+					Err(file_not_found_error)
+				} else if exception.is_type("java.io.IOException") {
+					// There appears to be only one non-FileNotFoundException IOException, which is
+					// too many open handles. Just in case, check the message.
+					let len = exception.message_length();
+					self.buffer.resize(len, 0);
+					let message = exception.message(self.buffer).unwrap();
+					if message == "too many open handles" {
+						Err(Error::TooManyDescriptors)
+					} else {
+						Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+					}
+				} else {
+					// No other exceptions appear to be thrown, so if one is, it means we’re
+					// talking to something that’s not a normal filesystem.
+					Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+				}
+			}
 			Err(e) => Err(e.into()),
 		}
 	}
@@ -503,9 +533,8 @@ impl<'handle, 'invoker, 'buffer> LockedReadHandle<'handle, 'invoker, 'buffer> {
 	/// Seeks to a position in the file and returns the resulting absolute byte position.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the effective seek position is negative.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NegativeSeek`](Error::NegativeSeek)
 	pub async fn seek(&mut self, basis: Seek, offset: i64) -> Result<u64, Error> {
 		seek_impl(
 			self.invoker,
@@ -527,16 +556,14 @@ impl<'handle, 'invoker, 'buffer> LockedReadHandle<'handle, 'invoker, 'buffer> {
 	/// buffer. Consequently, the `LockedReadHandle` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the read operation failed, typically because the
-	///   computer does not have enough energy stored.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn read(self, length: usize) -> Result<Option<&'buffer [u8]>, Error> {
 		use minicbor::bytes::ByteSlice;
 		#[derive(Encode)]
 		#[cbor(array)]
 		struct Params<'descriptor>(#[n(0)] &'descriptor descriptor::Owned, #[n(1)] usize);
-		let ret: Result<OneValue<Option<&'buffer ByteSlice>>, oc_wasm_safe::error::Error> =
+		let ret: Result<OneValue<Option<&'buffer ByteSlice>>, MethodCallError<'_>> =
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -548,7 +575,23 @@ impl<'handle, 'invoker, 'buffer> LockedReadHandle<'handle, 'invoker, 'buffer> {
 		match ret {
 			Ok(OneValue(Some(bytes))) => Ok(Some(bytes)),
 			Ok(OneValue(None)) => Ok(None),
-			Err(oc_wasm_safe::error::Error::Other) => Err(Error::Failed("read failed".to_owned())),
+			Err(MethodCallError::Other(exception)) => {
+				if exception.is_type("java.io.IOException") {
+					// The borrow checker isn’t quite smart enough to notice that we can drop the
+					// borrow of “buffer” and reuse it in this branch because we’re not going to
+					// return anything that depends on it. Fortunately, the error string we’re
+					// looking for is small and of fixed size, so just use a fixed-size buffer
+					// instead.
+					const NOT_ENOUGH_ENERGY: &str = "not enough energy";
+					let mut message_buffer = [0_u8; NOT_ENOUGH_ENERGY.len()];
+					match exception.message(&mut message_buffer) {
+						Ok(m) if m == NOT_ENOUGH_ENERGY => Err(Error::NotEnoughEnergy),
+						_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
+					}
+				} else {
+					Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+				}
+			}
 			Err(e) => Err(e.into()),
 		}
 	}
@@ -603,9 +646,8 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 	/// Seeks to a position in the file and returns the resulting absolute byte position.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the effective seek position is negative.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NegativeSeek`](Error::NegativeSeek)
 	pub async fn seek(&mut self, basis: Seek, offset: i64) -> Result<u64, Error> {
 		seek_impl(
 			self.invoker,
@@ -621,10 +663,9 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 	/// Writes bytes to the file.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
-	/// * [`Failed`](Error::Failed) is returned if the write operation failed, typically because
-	///   the computer does not have enough energy stored.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`DataTooLarge`](Error::DataTooLarge) if the disk is out of space
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
 		use minicbor::bytes::ByteSlice;
 		#[derive(Encode)]
@@ -633,7 +674,7 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 			#[n(0)] &'descriptor descriptor::Owned,
 			#[n(1)] &'bytes ByteSlice,
 		);
-		let ret: Result<Ignore, oc_wasm_safe::error::Error> = component_method(
+		let ret: Result<Ignore, MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.handle.address,
@@ -643,7 +684,26 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 		.await;
 		match ret {
 			Ok(_) => Ok(()),
-			Err(oc_wasm_safe::error::Error::Other) => Err(Error::Failed("write failed".to_owned())),
+			Err(MethodCallError::Other(exception)) => {
+				if exception.is_type("java.io.IOException") {
+					// The borrow checker isn’t quite smart enough to notice that we can drop the
+					// borrow of “buffer” and reuse it in this branch because we’re not going to
+					// return anything that depends on it. Fortunately, the error string we’re
+					// looking for is small and of fixed size, so just use a fixed-size buffer
+					// instead.
+					const NOT_ENOUGH_ENERGY: &str = "not enough energy";
+					const NOT_ENOUGH_SPACE: &str = "not enough space";
+					let mut message_buffer =
+						[0_u8; max_usize(NOT_ENOUGH_ENERGY.len(), NOT_ENOUGH_SPACE.len())];
+					match exception.message(&mut message_buffer) {
+						Ok(m) if m == NOT_ENOUGH_ENERGY => Err(Error::NotEnoughEnergy),
+						Ok(m) if m == NOT_ENOUGH_SPACE => Err(Error::DataTooLarge),
+						_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
+					}
+				} else {
+					Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+				}
+			}
 			Err(e) => Err(e.into()),
 		}
 	}
@@ -652,9 +712,8 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 /// Seeks to a position in a file and returns the resulting absolute byte position.
 ///
 /// # Errors
-/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-///   inaccessible, or is not a filesystem.
-/// * [`Failed`](Error::Failed) is returned if the effective seek position is negative.
+/// * [`BadComponent`](Error::BadComponent)
+/// * [`NegativeSeek`](Error::NegativeSeek)
 async fn seek_impl(
 	invoker: &mut Invoker,
 	buffer: &mut Vec<u8>,
@@ -670,7 +729,7 @@ async fn seek_impl(
 		#[n(1)] Seek,
 		#[n(2)] i64,
 	);
-	let ret: Result<OneValue<_>, oc_wasm_safe::error::Error> = component_method(
+	let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
 		invoker,
 		buffer,
 		address,
@@ -680,9 +739,7 @@ async fn seek_impl(
 	.await;
 	match ret {
 		Ok(OneValue(position)) => Ok(position),
-		Err(oc_wasm_safe::error::Error::BadParameters) => {
-			Err(Error::Failed("bad seek position".to_owned()))
-		}
+		Err(MethodCallError::BadParameters(_)) => Err(Error::NegativeSeek),
 		Err(e) => Err(e.into()),
 	}
 }

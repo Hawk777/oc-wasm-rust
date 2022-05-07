@@ -3,11 +3,13 @@
 use crate::common::Lockable;
 use crate::error::Error;
 use crate::helpers::{Ignore, NullAndStringOr, OneValue};
-use alloc::borrow::ToOwned;
 use alloc::vec::Vec;
 use minicbor::bytes::ByteSlice;
 use oc_wasm_futures::invoke::component_method;
-use oc_wasm_safe::{component::Invoker, Address};
+use oc_wasm_safe::{
+	component::{Invoker, MethodCallError},
+	Address,
+};
 
 /// The type name for EEPROM components.
 pub const TYPE: &str = "eeprom";
@@ -75,8 +77,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "get", None)
@@ -89,13 +90,13 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// In an EEPROM used for booting, the main storage area contains the BIOS code.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
-	/// * [`Failed`](Error::Failed) is returned if the EEPROM is read-only, the provided data is
-	///   too long, or there is not enough energy to perform the write.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`DataTooLarge`](Error::DataTooLarge)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`StorageReadOnly`](Error::StorageReadOnly)
 	pub async fn set(&mut self, data: &[u8]) -> Result<(), Error> {
 		let data: &ByteSlice = data.into();
-		let ret: Result<NullAndStringOr<'_, Ignore>, oc_wasm_safe::error::Error> =
+		Self::map_errors::<Ignore>(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -103,17 +104,10 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"set",
 				Some(&OneValue(data)),
 			)
-			.await;
-		match ret {
-			Ok(ret) => {
-				ret.into_result()?;
-				Ok(())
-			}
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				Err(Error::Failed("not enough space".to_owned()))
-			}
-			Err(e) => Err(Error::BadComponent(e)),
-		}
+			.await,
+			Error::DataTooLarge,
+		)?;
+		Ok(())
 	}
 
 	/// Returns the label, if it has one.
@@ -124,8 +118,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the filesystem does not exist, is
-	///   inaccessible, or is not a filesystem.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_label(self) -> Result<&'buffer str, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
@@ -141,26 +134,27 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
-	/// * [`Failed`](Error::Failed) is returned if the EEPROM is read-only.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`StorageReadOnly`](Error::StorageReadOnly)
 	pub async fn set_label(self, label: &str) -> Result<&'buffer str, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"setLabel",
-			Some(&OneValue(label)),
-		)
-		.await?;
-		Ok(ret.into_result()?.0)
+		let ret: OneValue<_> = Self::map_errors(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"setLabel",
+				Some(&OneValue(label)),
+			)
+			.await,
+			Error::BadComponent(oc_wasm_safe::error::Error::Unknown),
+		)?;
+		Ok(ret.0)
 	}
 
 	/// Returns the capacity, in bytes, of the main storage area.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_size(&mut self) -> Result<usize, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getSize", None)
@@ -171,8 +165,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// Returns the CRC32 of the contents of the main storage area.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_checksum(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<&'_ str> = component_method::<(), _>(
 			self.invoker,
@@ -186,7 +179,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		if let Ok(ret) = u32::from_str_radix(ret, 16) {
 			Ok(ret)
 		} else {
-			Err(Error::BadComponent(oc_wasm_safe::error::Error::Other))
+			Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 		}
 	}
 
@@ -201,27 +194,27 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// checksum is correct).
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
-	/// * [`Failed`](Error::Failed) is returned if the passed-in checksum does not match.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
 	pub async fn make_read_only(&mut self, checksum: u32) -> Result<(), Error> {
-		let ret: NullAndStringOr<'_, Ignore> = component_method(
-			self.invoker,
-			self.buffer,
-			&self.address,
-			"makeReadonly",
-			Some(&OneValue(&alloc::format!("{:08x}", checksum))),
-		)
-		.await?;
-		ret.into_result()?;
+		Self::map_errors::<Ignore>(
+			component_method(
+				self.invoker,
+				self.buffer,
+				&self.address,
+				"makeReadonly",
+				Some(&OneValue(&alloc::format!("{:08x}", checksum))),
+			)
+			.await,
+			Error::BadComponent(oc_wasm_safe::error::Error::Unknown),
+		)?;
 		Ok(())
 	}
 
 	/// Returns the capacity, in bytes, of the volatile data area.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_data_size(&mut self) -> Result<usize, Error> {
 		let ret: OneValue<_> = component_method::<(), _>(
 			self.invoker,
@@ -243,8 +236,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// buffer. Consequently, the `Locked` is consumed and cannot be reused.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
+	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_data(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
 			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getData", None)
@@ -258,13 +250,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// to prefer booting from.
 	///
 	/// # Errors
-	/// * [`BadComponent`](Error::BadComponent) is returned if the EEPROM does not exist, is
-	///   inaccessible, or is not a EEPROM.
-	/// * [`Failed`](Error::Failed) is returned if the provided data is too long or there is not
-	///   enough energy to perform the write.
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`DataTooLarge`](Error::DataTooLarge)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	pub async fn set_data(&mut self, data: &[u8]) -> Result<(), Error> {
 		let data: &ByteSlice = data.into();
-		let ret: Result<NullAndStringOr<'_, Ignore>, oc_wasm_safe::error::Error> =
+		Self::map_errors::<Ignore>(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -272,16 +263,36 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				"setData",
 				Some(&OneValue(data)),
 			)
-			.await;
-		match ret {
-			Ok(ret) => {
-				ret.into_result()?;
-				Ok(())
+			.await,
+			Error::DataTooLarge,
+		)?;
+		Ok(())
+	}
+
+	/// Given a `Result<NullAndStringOr<T>, MethodCallError>`, maps the errors (both exceptions and
+	/// null-and-string-style errors) to appropriate error constants, returning any success object
+	/// unmodified. [`BadParameters`](MethodCallError::BadParameters) is mapped to a specified
+	/// value.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
+	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
+	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`StorageReadOnly`](Error::StorageReadOnly)
+	fn map_errors<T>(
+		x: Result<NullAndStringOr<'_, T>, MethodCallError<'_>>,
+		bad_parameters: Error,
+	) -> Result<T, Error> {
+		match x {
+			Ok(NullAndStringOr::Ok(x)) => Ok(x),
+			Ok(NullAndStringOr::Err("incorrect checksum")) => Err(Error::ChecksumMismatch),
+			Ok(NullAndStringOr::Err("not enough energy")) => Err(Error::NotEnoughEnergy),
+			Ok(NullAndStringOr::Err("storage is readonly")) => Err(Error::StorageReadOnly),
+			Ok(NullAndStringOr::Err(_)) => {
+				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 			}
-			Err(oc_wasm_safe::error::Error::BadParameters) => {
-				Err(Error::Failed("not enough space".to_owned()))
-			}
-			Err(e) => Err(Error::BadComponent(e)),
+			Err(MethodCallError::BadParameters(_)) => Err(bad_parameters),
+			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
 }
