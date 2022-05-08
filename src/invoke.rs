@@ -2,15 +2,18 @@
 
 use super::sleep;
 use alloc::vec::Vec;
+use core::convert::TryInto;
 use core::future::Future;
 use core::hint::unreachable_unchecked;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use minicbor::{decode, encode, Decode, Encode};
 use oc_wasm_safe::{
-	component::{InvokeEndLengthResult, InvokeEndResult, InvokeResult, Invoker, MethodCall},
+	component::{
+		InvokeEndLengthResult, InvokeEndResult, InvokeResult, Invoker, MethodCall, MethodCallError,
+	},
 	descriptor::{AsDescriptor, Borrowed},
-	error::Result,
+	error::Error,
 	Address,
 };
 
@@ -32,7 +35,7 @@ use oc_wasm_safe::{
 pub struct EndLength<'invoker>(Option<MethodCall<'invoker>>);
 
 impl<'invoker> Future for EndLength<'invoker> {
-	type Output = Result<(usize, MethodCall<'invoker>)>;
+	type Output = Result<(usize, MethodCall<'invoker>), MethodCallError<'invoker>>;
 
 	fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
 		match self.0.take().unwrap().end_length() {
@@ -76,7 +79,7 @@ pub enum EndResult<'invoker> {
 pub struct EndIntoSlice<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut [u8])>);
 
 impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
-	type Output = Result<EndResult<'invoker>>;
+	type Output = Result<EndResult<'invoker>, MethodCallError<'invoker>>;
 
 	fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
 		let (call, buffer): (MethodCall<'invoker>, &'buffer mut [u8]) = self.0.take().unwrap();
@@ -112,7 +115,7 @@ impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
 pub struct EndIntoVec<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut Vec<u8>)>);
 
 impl<'invoker, 'buffer> Future for EndIntoVec<'invoker, 'buffer> {
-	type Output = Result<()>;
+	type Output = Result<(), MethodCallError<'invoker>>;
 
 	fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
 		let (call, buffer): (MethodCall<'invoker>, &'buffer mut Vec<u8>) = self.0.take().unwrap();
@@ -226,7 +229,7 @@ trait Callable {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)>;
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error>;
 }
 
 /// A component method call.
@@ -241,7 +244,7 @@ impl Callable for ComponentMethodCallable<'_> {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)> {
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error> {
 		invoker.component_method(self.address, self.method, params)
 	}
 }
@@ -255,7 +258,7 @@ impl Callable for ValueCallable<'_> {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)> {
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error> {
 		invoker.value(&self.0, params)
 	}
 }
@@ -269,7 +272,7 @@ impl Callable for ValueIndexedReadCallable<'_> {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)> {
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error> {
 		invoker.value_indexed_read(&self.0, params)
 	}
 }
@@ -283,7 +286,7 @@ impl Callable for ValueIndexedWriteCallable<'_> {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)> {
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error> {
 		invoker.value_indexed_write(&self.0, params)
 	}
 }
@@ -300,7 +303,7 @@ impl Callable for ValueMethodCallable<'_> {
 		self,
 		invoker: &'invoker mut Invoker,
 		params: Option<&[u8]>,
-	) -> Result<(InvokeResult, MethodCall<'invoker>)> {
+	) -> Result<(InvokeResult, MethodCall<'invoker>), Error> {
 		invoker.value_method(&self.value, self.method, params)
 	}
 }
@@ -316,15 +319,19 @@ async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: 
 	buffer: &'buffer mut Vec<u8>,
 	params: Option<&Params>,
 	call: Call,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	let params = params.map(|params| {
 		buffer.clear();
 		encode(params, &mut *buffer).unwrap();
 		buffer.as_slice()
 	});
-	let (_, call) = call.start(invoker, params)?;
+	// try_into() will never fail because Callable::start will never return an exception-bearing
+	// error.
+	let (_, call) = call
+		.start(invoker, params)
+		.map_err(|e| e.try_into().unwrap())?;
 	call.end_into_vec(buffer).await?;
-	decode(buffer).or(Err(oc_wasm_safe::error::Error::CborDecode))
+	decode(buffer).or(Err(MethodCallError::CborDecode))
 }
 
 /// Performs a complete method call on a component.
@@ -359,7 +366,7 @@ pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<
 	address: &Address,
 	method: &str,
 	params: Option<&Params>,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	call(
 		invoker,
 		buffer,
@@ -405,7 +412,7 @@ pub async fn value<
 	buffer: &'buffer mut Vec<u8>,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	call(
 		invoker,
 		buffer,
@@ -451,7 +458,7 @@ pub async fn value_indexed_read<
 	buffer: &'buffer mut Vec<u8>,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	call(
 		invoker,
 		buffer,
@@ -497,7 +504,7 @@ pub async fn value_indexed_write<
 	buffer: &'buffer mut Vec<u8>,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	call(
 		invoker,
 		buffer,
@@ -545,7 +552,7 @@ pub async fn value_method<
 	descriptor: &Descriptor,
 	method: &str,
 	params: Option<&Params>,
-) -> Result<Return> {
+) -> Result<Return, MethodCallError<'invoker>> {
 	call(
 		invoker,
 		buffer,
