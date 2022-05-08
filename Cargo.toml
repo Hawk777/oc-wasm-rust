@@ -2,13 +2,12 @@
 name = "oc-wasm-futures"
 version = "0.2.0"
 authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2018"
+edition = "2021"
 description = "Futures that allow async/await to be used in OC-Wasm for a more ergonomic experience"
 repository = "https://gitlab.com/Hawk777/oc-wasm-futures"
 license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
-resolver = "2"
 
 [dependencies.minicbor]
 default-features = false
