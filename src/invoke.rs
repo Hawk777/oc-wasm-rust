@@ -324,7 +324,7 @@ async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: 
 	});
 	let (_, call) = call.start(invoker, params)?;
 	call.end_into_vec(buffer).await?;
-	Ok(decode(buffer).or(Err(oc_wasm_safe::error::Error::CborDecode))?)
+	decode(buffer).or(Err(oc_wasm_safe::error::Error::CborDecode))
 }
 
 /// Performs a complete method call on a component.
