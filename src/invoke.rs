@@ -135,12 +135,12 @@ impl<'invoker, 'buffer> Future for EndIntoVec<'invoker, 'buffer> {
 					// buffer to a sufficient size, and nobody else could have cleared the method
 					// call and started another one in the mean time because we hold the
 					// MethodCall.
-					unsafe { unreachable_unchecked() }
+					unsafe { unreachable_unchecked() },
 					InvokeEndResult::Pending(_) =>
 					// SAFETY: This is impossible because we just called end_length and it returned
 					// Done, and nobody else could have cleared the method call and started another
 					// one in the mean time because we hold the MethodCall.
-					unsafe { unreachable_unchecked() }
+					unsafe { unreachable_unchecked() },
 				}
 			}),
 		}
