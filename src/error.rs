@@ -116,7 +116,7 @@ pub enum Error {
 impl Error {
 	/// Returns a string describing the error.
 	#[must_use = "This function is only useful for its return value"]
-	pub fn as_str(&self) -> &str {
+	pub fn as_str(&self) -> &'static str {
 		match self {
 			Self::BadComponent(_) => "nonexistent or incorrect component",
 			Self::BadCoordinate => "bad coordinate",
