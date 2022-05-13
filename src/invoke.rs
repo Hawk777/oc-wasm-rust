@@ -143,45 +143,6 @@ pub enum EndResult<'invoker> {
 /// Returns the result of the method call as a CBOR-encoded data item.
 ///
 /// On success, the CBOR-encoded result is written into `buffer`, and the number of bytes written
-/// is returned. If the buffer is not large enough to hold the call result,
-/// [`BufferTooShort`](EndResult::BufferTooShort) is returned, containing the `MethodCall` object,
-/// allowing the caller to retry fetching the results with a larger buffer, or call
-/// [`end_length`](MethodCallExt::end_length) to obtain the needed buffer size.
-///
-/// # Errors
-/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
-///   because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
-///   the method does not exist on the component.
-/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
-///   starting the call are not acceptable for the method.
-/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
-#[must_use = "A future does nothing unless awaited."]
-pub struct EndIntoSlice<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut [u8])>);
-
-impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
-	type Output = Result<EndResult<'invoker>, MethodCallError<'invoker>>;
-
-	fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-		let (call, buffer): (MethodCall<'invoker>, &'buffer mut [u8]) = self.0.take().unwrap();
-		match call.end(buffer) {
-			InvokeEndResult::Done(Ok(result)) => Poll::Ready(Ok(EndResult::Done(result))),
-			InvokeEndResult::Done(Err(e)) => Poll::Ready(Err(e)),
-			InvokeEndResult::BufferTooShort(call) => {
-				Poll::Ready(Ok(EndResult::BufferTooShort(call)))
-			}
-			InvokeEndResult::Pending(call) => {
-				self.0 = Some((call, buffer));
-				sleep::register_next_timeslice_wakeup(context.waker());
-				Poll::Pending
-			}
-		}
-	}
-}
-
-/// Returns the result of the method call as a CBOR-encoded data item.
-///
-/// On success, the CBOR-encoded result is written into `buffer`, and the number of bytes written
 /// is returned.
 ///
 /// # Errors
@@ -233,24 +194,6 @@ pub trait MethodCallExt<'invoker> {
 
 	/// Returns the result of the method call as a CBOR-encoded data item.
 	///
-	/// On success, the CBOR-encoded result is written into `buffer`, and a slice referring to the
-	/// written bytes is returned. If the buffer is not large enough to hold the call result,
-	/// [`BufferTooShort`](EndResult::BufferTooShort) is returned, containing the `MethodCall`
-	/// object, allowing the caller to retry fetching the results with a larger buffer, or call
-	/// [`end_length`](Self::end_length) to obtain the needed buffer size.
-	///
-	/// # Errors
-	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call
-	///   failed because the component does not exist or is inaccessible.
-	/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed
-	///   because the method does not exist on the component.
-	/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided
-	///   when starting the call are not acceptable for the method.
-	/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
-	fn end_into_slice<'buffer>(self, buffer: &'buffer mut [u8]) -> EndIntoSlice<'invoker, 'buffer>;
-
-	/// Returns the result of the method call as a CBOR-encoded data item.
-	///
 	/// On success, the CBOR-encoded result is written into `buffer`, and the number of bytes
 	/// written is returned.
 	///
@@ -274,10 +217,6 @@ pub trait MethodCallExt<'invoker> {
 impl<'invoker> MethodCallExt<'invoker> for MethodCall<'invoker> {
 	fn end_length(self) -> EndLength<'invoker> {
 		EndLength(Some(self))
-	}
-
-	fn end_into_slice<'buffer>(self, buffer: &'buffer mut [u8]) -> EndIntoSlice<'invoker, 'buffer> {
-		EndIntoSlice(Some((self, buffer)))
 	}
 
 	fn end_into_buffer<'buffer, B: Buffer>(
