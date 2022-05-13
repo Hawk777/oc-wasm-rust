@@ -1,10 +1,8 @@
 //! Provides futures that wait for method calls to complete and fetch their results.
 
 use super::sleep;
-use alloc::vec::Vec;
 use core::convert::TryInto;
 use core::future::Future;
-use core::hint::unreachable_unchecked;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use minicbor::{decode, encode, Decode, Encode};
@@ -14,8 +12,91 @@ use oc_wasm_safe::{
 	},
 	descriptor::{AsDescriptor, Borrowed},
 	error::Error,
-	Address,
+	panic_or_trap, Address,
 };
+
+/// An object that can be used as a scratch buffer for making component method calls.
+pub trait Buffer: AsMut<[u8]> + minicbor::encode::Write {
+	/// Encodes a CBOR-encodable object into the buffer.
+	///
+	/// On success, a sub-slice of the buffer holding the encoded object is returned.
+	///
+	/// # Panics
+	/// This method should panic if the buffer is too small to hold the object and cannot be
+	/// resized, or if `x` fails to encode.
+	fn encode_into(&mut self, x: impl Encode) -> &[u8];
+
+	/// Tries to end a component call invocation into the buffer.
+	///
+	/// If the buffer is of insufficient size and is resizable, the implementation should resize
+	/// the buffer and try again. In any other case, it should return the
+	/// [`InvokeEndResult`](InvokeEndResult) directly.
+	///
+	/// # Errors
+	/// This function can return any error returned by [`MethodCall::end`](MethodCall::end).
+	fn end_into<'invoker>(&mut self, call: MethodCall<'invoker>) -> InvokeEndResult<'invoker>;
+}
+
+impl Buffer for &mut [u8] {
+	fn encode_into(&mut self, x: impl Encode) -> &[u8] {
+		// The Write impl for &mut[u8] mutates the reference-to-slice itself to refer to a smaller
+		// slice. We don’t want to affect self, since we want to retain knowledge of the whole
+		// slice for subsequent uses as a buffer, so make a copy of the reference first and let
+		// encode mutate that.
+		let mut target: &mut [u8] = self;
+		match encode(x, &mut target) {
+			Ok(()) => target,
+			Err(_) => panic_or_trap!("failed to encode component call parameters"),
+		}
+	}
+
+	fn end_into<'invoker>(&mut self, call: MethodCall<'invoker>) -> InvokeEndResult<'invoker> {
+		call.end(self)
+	}
+}
+
+#[cfg(feature = "alloc")]
+impl Buffer for alloc::vec::Vec<u8> {
+	fn encode_into(&mut self, x: impl Encode) -> &[u8] {
+		// The Write impl for Vec<u8> appends the bytes to the Vec, so we should clear it first and
+		// then return the whole Vec.
+		self.clear();
+		let result: Result<(), minicbor::encode::Error<core::convert::Infallible>> =
+			encode(x, &mut *self);
+		match result {
+			Ok(()) => self.as_mut(),
+			Err(_) => panic_or_trap!("failed to encode component call parameters"),
+		}
+	}
+
+	fn end_into<'invoker>(&mut self, mut call: MethodCall<'invoker>) -> InvokeEndResult<'invoker> {
+		loop {
+			self.clear();
+			let cap = self.capacity();
+			// SAFETY: capacity() returns the length of the allocation, end_ptr() promises to write no
+			// more than that many bytes to the buffer.
+			let ret = unsafe { call.end_ptr(self.as_mut_ptr(), cap) };
+			match ret {
+				InvokeEndResult::Done(Ok(n)) => {
+					// SAFETY: if end_ptr() returns Done(Ok(n)), then it promises to have written n
+					// bytes into the buffer.
+					unsafe { self.set_len(n) };
+					break InvokeEndResult::Done(Ok(n));
+				}
+				InvokeEndResult::Done(Err(e)) => break InvokeEndResult::Done(Err(e)),
+				InvokeEndResult::BufferTooShort(c) => match c.end_length() {
+					InvokeEndLengthResult::Done(Ok((n, c))) => {
+						self.reserve(n);
+						call = c;
+					}
+					InvokeEndLengthResult::Done(Err(e)) => break InvokeEndResult::Done(Err(e)),
+					InvokeEndLengthResult::Pending(c) => break InvokeEndResult::Pending(c),
+				},
+				InvokeEndResult::Pending(c) => break InvokeEndResult::Pending(c),
+			}
+		}
+	}
+}
 
 /// A future that waits for the method call to complete, then returns the length, in bytes, of the
 /// result.
@@ -100,10 +181,12 @@ impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
 
 /// Returns the result of the method call as a CBOR-encoded data item.
 ///
-/// On success, the CBOR-encoded result is written into `buffer`, which is modified to be the exact
-/// size of the written bytes.
+/// On success, the CBOR-encoded result is written into `buffer`, and the number of bytes written
+/// is returned.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the method call succeeded
+///   but the return value could not be fetched because the buffer is too small and not resizable.
 /// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
 ///   because the component does not exist or is inaccessible.
 /// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
@@ -112,40 +195,22 @@ impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 #[must_use = "A future does nothing unless awaited."]
-pub struct EndIntoVec<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut Vec<u8>)>);
+pub struct EndIntoBuffer<'invoker, 'buffer, B>(Option<(MethodCall<'invoker>, &'buffer mut B)>);
 
-impl<'invoker, 'buffer> Future for EndIntoVec<'invoker, 'buffer> {
-	type Output = Result<(), MethodCallError<'invoker>>;
+impl<'invoker, 'buffer, B: Buffer> Future for EndIntoBuffer<'invoker, 'buffer, B> {
+	type Output = Result<usize, MethodCallError<'invoker>>;
 
 	fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<Self::Output> {
-		let (call, buffer): (MethodCall<'invoker>, &'buffer mut Vec<u8>) = self.0.take().unwrap();
-		match call.end_length() {
-			InvokeEndLengthResult::Pending(new_call) => {
-				self.0 = Some((new_call, buffer));
+		// Do the first call.
+		let (call, buffer): (MethodCall<'invoker>, &'buffer mut B) = self.0.take().unwrap();
+		match buffer.end_into(call) {
+			InvokeEndResult::Done(result) => Poll::Ready(result),
+			InvokeEndResult::BufferTooShort(_) => Poll::Ready(Err(MethodCallError::BufferTooShort)),
+			InvokeEndResult::Pending(call) => {
+				self.0 = Some((call, buffer));
 				sleep::register_next_timeslice_wakeup(context.waker());
 				Poll::Pending
 			}
-			InvokeEndLengthResult::Done(Err(e)) => Poll::Ready(Err(e)),
-			InvokeEndLengthResult::Done(Ok((length, call))) => Poll::Ready({
-				buffer.resize(length, 0);
-				// The code is the same but the comments are different for the two cases and the distinction matters.
-				#[allow(clippy::match_same_arms)]
-				match call.end(buffer) {
-					InvokeEndResult::Done(Ok(_)) => Ok(()),
-					InvokeEndResult::Done(Err(e)) => Err(e),
-					InvokeEndResult::BufferTooShort(_) =>
-					// SAFETY: This is impossible because we just called end_length and resized the
-					// buffer to a sufficient size, and nobody else could have cleared the method
-					// call and started another one in the mean time because we hold the
-					// MethodCall.
-					unsafe { unreachable_unchecked() },
-					InvokeEndResult::Pending(_) =>
-					// SAFETY: This is impossible because we just called end_length and it returned
-					// Done, and nobody else could have cleared the method call and started another
-					// one in the mean time because we hold the MethodCall.
-					unsafe { unreachable_unchecked() },
-				}
-			}),
 		}
 	}
 }
@@ -186,10 +251,13 @@ pub trait MethodCallExt<'invoker> {
 
 	/// Returns the result of the method call as a CBOR-encoded data item.
 	///
-	/// On success, the CBOR-encoded result is written into `buffer`, which is modified to be the
-	/// exact size of the written bytes.
+	/// On success, the CBOR-encoded result is written into `buffer`, and the number of bytes
+	/// written is returned.
 	///
 	/// # Errors
+	/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the method call
+	///   succeeded but the return value could not be fetched because the buffer is too small and
+	///   not resizable.
 	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call
 	///   failed because the component does not exist or is inaccessible.
 	/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed
@@ -197,7 +265,10 @@ pub trait MethodCallExt<'invoker> {
 	/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided
 	///   when starting the call are not acceptable for the method.
 	/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
-	fn end_into_vec<'buffer>(self, buffer: &'buffer mut Vec<u8>) -> EndIntoVec<'invoker, 'buffer>;
+	fn end_into_buffer<'buffer, B: Buffer>(
+		self,
+		buffer: &'buffer mut B,
+	) -> EndIntoBuffer<'invoker, 'buffer, B>;
 }
 
 impl<'invoker> MethodCallExt<'invoker> for MethodCall<'invoker> {
@@ -209,8 +280,11 @@ impl<'invoker> MethodCallExt<'invoker> for MethodCall<'invoker> {
 		EndIntoSlice(Some((self, buffer)))
 	}
 
-	fn end_into_vec<'buffer>(self, buffer: &'buffer mut Vec<u8>) -> EndIntoVec<'invoker, 'buffer> {
-		EndIntoVec(Some((self, buffer)))
+	fn end_into_buffer<'buffer, B: Buffer>(
+		self,
+		buffer: &'buffer mut B,
+	) -> EndIntoBuffer<'invoker, 'buffer, B> {
+		EndIntoBuffer(Some((self, buffer)))
 	}
 }
 
@@ -315,24 +389,31 @@ impl Callable for ValueMethodCallable<'_> {
 /// call. The `'buffer` lifetime parameter is the lifetime of the scratch buffer. The `Params` type
 /// parameter is the type of the parameters to the call. The `Return` type parameter is the type of
 /// the return value(s) from the call. The `Call` type is the type of method being invoked.
-async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: Callable>(
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
+async fn call<
+	'invoker,
+	'buffer,
+	Params: Encode,
+	Return: Decode<'buffer>,
+	Call: Callable,
+	B: Buffer,
+>(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	params: Option<&Params>,
 	call: Call,
 ) -> Result<Return, MethodCallError<'invoker>> {
-	let params = params.map(|params| {
-		buffer.clear();
-		encode(params, &mut *buffer).unwrap();
-		buffer.as_slice()
-	});
+	let params = params.map(|params| buffer.encode_into(params));
 	// try_into() will never fail because Callable::start will never return an exception-bearing
 	// error.
 	let (_, call) = call
 		.start(invoker, params)
 		.map_err(|e| e.try_into().unwrap())?;
-	call.end_into_vec(buffer).await?;
-	decode(buffer).or(Err(MethodCallError::CborDecode))
+	let len = call.end_into_buffer(buffer).await?;
+	decode(&buffer.as_mut()[..len]).or(Err(MethodCallError::CborDecode))
 }
 
 /// Performs a complete method call on a component.
@@ -347,6 +428,8 @@ async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: 
 /// parameters to pass to the method.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the call succeeded but the
+///   return value could not be fetched because the buffer is too small and not resizable.
 /// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
 ///   but contains an invalid or unsupported CBOR sequence.
 /// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
@@ -360,9 +443,19 @@ async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: 
 /// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
-pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>>(
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
+pub async fn component_method<
+	'invoker,
+	'buffer,
+	Params: Encode,
+	Return: Decode<'buffer>,
+	B: Buffer,
+>(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	address: &Address,
 	method: &str,
 	params: Option<&Params>,
@@ -387,6 +480,8 @@ pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the call succeeded but the
+///   return value could not be fetched because the buffer is too small and not resizable.
 /// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
 ///   but contains an invalid or unsupported CBOR sequence.
 /// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
@@ -400,15 +495,20 @@ pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<
 /// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
 pub async fn value<
 	'invoker,
 	'buffer,
 	Params: Encode,
 	Return: Decode<'buffer>,
 	Descriptor: AsDescriptor,
+	B: Buffer,
 >(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
 ) -> Result<Return, MethodCallError<'invoker>> {
@@ -432,6 +532,8 @@ pub async fn value<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the call succeeded but the
+///   return value could not be fetched because the buffer is too small and not resizable.
 /// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
 ///   but contains an invalid or unsupported CBOR sequence.
 /// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
@@ -445,15 +547,20 @@ pub async fn value<
 /// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
 pub async fn value_indexed_read<
 	'invoker,
 	'buffer,
 	Params: Encode,
 	Return: Decode<'buffer>,
 	Descriptor: AsDescriptor,
+	B: Buffer,
 >(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
 ) -> Result<Return, MethodCallError<'invoker>> {
@@ -477,6 +584,8 @@ pub async fn value_indexed_read<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the call succeeded but the
+///   return value could not be fetched because the buffer is too small and not resizable.
 /// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
 ///   but contains an invalid or unsupported CBOR sequence.
 /// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
@@ -490,15 +599,20 @@ pub async fn value_indexed_read<
 /// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
 pub async fn value_indexed_write<
 	'invoker,
 	'buffer,
 	Params: Encode,
 	Return: Decode<'buffer>,
 	Descriptor: AsDescriptor,
+	B: Buffer,
 >(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	descriptor: &Descriptor,
 	params: Option<&Params>,
 ) -> Result<Return, MethodCallError<'invoker>> {
@@ -523,6 +637,8 @@ pub async fn value_indexed_write<
 /// CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
+/// * [`BufferTooShort`](MethodCallError::BufferTooShort) is returned if the call succeeded but the
+///   return value could not be fetched because the buffer is too small and not resizable.
 /// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
 ///   but contains an invalid or unsupported CBOR sequence.
 /// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
@@ -536,15 +652,20 @@ pub async fn value_indexed_write<
 /// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
 ///   starting the call are not acceptable for the method.
 /// * [`Other`](MethodCallError::Other) is returned if the method call failed.
+///
+/// # Panics
+/// This function panics if `buffer` is too small to hold `params` and cannot be resized, or if
+/// `params` fails to encode.
 pub async fn value_method<
 	'invoker,
 	'buffer,
 	Params: Encode,
 	Return: Decode<'buffer>,
 	Descriptor: AsDescriptor,
+	B: Buffer,
 >(
 	invoker: &'invoker mut Invoker,
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 	descriptor: &Descriptor,
 	method: &str,
 	params: Option<&Params>,

@@ -35,6 +35,7 @@
 // I’m not a big fan of this style, and it sometimes generates larger code.
 #![allow(clippy::option_if_let_else)]
 
+#[cfg(feature = "alloc")]
 extern crate alloc;
 
 pub mod invoke;

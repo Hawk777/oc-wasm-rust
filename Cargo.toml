@@ -16,17 +16,21 @@ version = "^0.15"
 
 [dependencies.oc-wasm-safe]
 default-features = false
-version = "^0.2"
+version = "^0.2.1"
 
 [dependencies.ordered-float]
 default-features = false
 version = "^3"
 
 [features]
-default = ["proper-waker"]
+default = ["alloc", "proper-waker"]
+# Enable this if you want to use a Vec<u8> as your scratch buffer rather than
+# using a fixed-size slice or providing your own customer Buffer
+# implementation.
+alloc = []
 # Disable this if your executor passes a dummy waker (that doesn’t do anything)
 # and always polls every task to get a smaller sleep module.
-proper-waker = []
+proper-waker = ["alloc"]
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"
