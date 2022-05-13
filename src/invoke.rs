@@ -24,13 +24,13 @@ use oc_wasm_safe::{
 /// [`MethodCall`](MethodCall) to be reused to fetch the actual bytes.
 ///
 /// # Errors
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 #[must_use = "A future does nothing unless awaited."]
 pub struct EndLength<'invoker>(Option<MethodCall<'invoker>>);
 
@@ -68,13 +68,13 @@ pub enum EndResult<'invoker> {
 /// [`end_length`](MethodCallExt::end_length) to obtain the needed buffer size.
 ///
 /// # Errors
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 #[must_use = "A future does nothing unless awaited."]
 pub struct EndIntoSlice<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut [u8])>);
 
@@ -104,13 +104,13 @@ impl<'invoker, 'buffer> Future for EndIntoSlice<'invoker, 'buffer> {
 /// size of the written bytes.
 ///
 /// # Errors
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 #[must_use = "A future does nothing unless awaited."]
 pub struct EndIntoVec<'invoker, 'buffer>(Option<(MethodCall<'invoker>, &'buffer mut Vec<u8>)>);
 
@@ -157,13 +157,13 @@ pub trait MethodCallExt<'invoker> {
 	/// [`MethodCall`](MethodCall) to be reused to fetch the actual bytes.
 	///
 	/// # Errors
-	/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the
-	///   method call failed because the component does not exist or is inaccessible.
-	/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-	///   failed because the method does not exist on the component.
-	/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the
-	///   parameters provided when starting the call are not acceptable for the method.
-	/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call
+	///   failed because the component does not exist or is inaccessible.
+	/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed
+	///   because the method does not exist on the component.
+	/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided
+	///   when starting the call are not acceptable for the method.
+	/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 	fn end_length(self) -> EndLength<'invoker>;
 
 	/// Returns the result of the method call as a CBOR-encoded data item.
@@ -175,13 +175,13 @@ pub trait MethodCallExt<'invoker> {
 	/// [`end_length`](Self::end_length) to obtain the needed buffer size.
 	///
 	/// # Errors
-	/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the
-	///   method call failed because the component does not exist or is inaccessible.
-	/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-	///   failed because the method does not exist on the component.
-	/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the
-	///   parameters provided when starting the call are not acceptable for the method.
-	/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call
+	///   failed because the component does not exist or is inaccessible.
+	/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed
+	///   because the method does not exist on the component.
+	/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided
+	///   when starting the call are not acceptable for the method.
+	/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 	fn end_into_slice<'buffer>(self, buffer: &'buffer mut [u8]) -> EndIntoSlice<'invoker, 'buffer>;
 
 	/// Returns the result of the method call as a CBOR-encoded data item.
@@ -190,13 +190,13 @@ pub trait MethodCallExt<'invoker> {
 	/// exact size of the written bytes.
 	///
 	/// # Errors
-	/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the
-	///   method call failed because the component does not exist or is inaccessible.
-	/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-	///   failed because the method does not exist on the component.
-	/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the
-	///   parameters provided when starting the call are not acceptable for the method.
-	/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call
+	///   failed because the component does not exist or is inaccessible.
+	/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed
+	///   because the method does not exist on the component.
+	/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided
+	///   when starting the call are not acceptable for the method.
+	/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 	fn end_into_vec<'buffer>(self, buffer: &'buffer mut Vec<u8>) -> EndIntoVec<'invoker, 'buffer>;
 }
 
@@ -219,12 +219,13 @@ trait Callable {
 	/// Starts the method call.
 	///
 	/// # Errors
-	/// * [`CborDecode`](Error::CborDecode) is returned if the `params` parameter is present but
-	///   contains an invalid or unsupported CBOR sequence.
-	/// * [`BadDescriptor`](Error::BadDescriptor) is returned if the parameters contain a
+	/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is
+	///   present but contains an invalid or unsupported CBOR sequence.
+	/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
 	///   descriptor reference to a descriptor that is not open.
-	/// * [`TooManyDescriptors`](Error::TooManyDescriptors) is returned if the descriptor table is
-	///   too full and some descriptors must be closed before another method call can be made.
+	/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+	///   table is too full and some descriptors must be closed before another method call can be
+	///   made.
 	fn start<'invoker>(
 		self,
 		invoker: &'invoker mut Invoker,
@@ -346,20 +347,19 @@ async fn call<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>, Call: 
 /// parameters to pass to the method.
 ///
 /// # Errors
-/// * [`CborDecode`](oc_wasm_safe::error::Error::CborDecode) is returned if the `params` parameter
-///   is present but contains an invalid or unsupported CBOR sequence.
-/// * [`BadDescriptor`](oc_wasm_safe::error::Error::BadDescriptor) is returned if the parameters
-///   contain a descriptor reference to a descriptor that is not open.
-/// * [`TooManyDescriptors`](oc_wasm_safe::error::Error::TooManyDescriptors) is returned if the
-///   descriptor table is too full and some descriptors must be closed before another method call
-///   can be made.
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
+///   but contains an invalid or unsupported CBOR sequence.
+/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
+///   descriptor reference to a descriptor that is not open.
+/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+///   table is too full and some descriptors must be closed before another method call can be made.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<'buffer>>(
 	invoker: &'invoker mut Invoker,
 	buffer: &'buffer mut Vec<u8>,
@@ -387,20 +387,19 @@ pub async fn component_method<'invoker, 'buffer, Params: Encode, Return: Decode<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
-/// * [`CborDecode`](oc_wasm_safe::error::Error::CborDecode) is returned if the `params` parameter
-///   is present but contains an invalid or unsupported CBOR sequence.
-/// * [`BadDescriptor`](oc_wasm_safe::error::Error::BadDescriptor) is returned if the parameters
-///   contain a descriptor reference to a descriptor that is not open.
-/// * [`TooManyDescriptors`](oc_wasm_safe::error::Error::TooManyDescriptors) is returned if the
-///   descriptor table is too full and some descriptors must be closed before another method call
-///   can be made.
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
+///   but contains an invalid or unsupported CBOR sequence.
+/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
+///   descriptor reference to a descriptor that is not open.
+/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+///   table is too full and some descriptors must be closed before another method call can be made.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 pub async fn value<
 	'invoker,
 	'buffer,
@@ -433,20 +432,19 @@ pub async fn value<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
-/// * [`CborDecode`](oc_wasm_safe::error::Error::CborDecode) is returned if the `params` parameter
-///   is present but contains an invalid or unsupported CBOR sequence.
-/// * [`BadDescriptor`](oc_wasm_safe::error::Error::BadDescriptor) is returned if the parameters
-///   contain a descriptor reference to a descriptor that is not open.
-/// * [`TooManyDescriptors`](oc_wasm_safe::error::Error::TooManyDescriptors) is returned if the
-///   descriptor table is too full and some descriptors must be closed before another method call
-///   can be made.
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
+///   but contains an invalid or unsupported CBOR sequence.
+/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
+///   descriptor reference to a descriptor that is not open.
+/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+///   table is too full and some descriptors must be closed before another method call can be made.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 pub async fn value_indexed_read<
 	'invoker,
 	'buffer,
@@ -479,20 +477,19 @@ pub async fn value_indexed_read<
 /// parameter, if present, contains a CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
-/// * [`CborDecode`](oc_wasm_safe::error::Error::CborDecode) is returned if the `params` parameter
-///   is present but contains an invalid or unsupported CBOR sequence.
-/// * [`BadDescriptor`](oc_wasm_safe::error::Error::BadDescriptor) is returned if the parameters
-///   contain a descriptor reference to a descriptor that is not open.
-/// * [`TooManyDescriptors`](oc_wasm_safe::error::Error::TooManyDescriptors) is returned if the
-///   descriptor table is too full and some descriptors must be closed before another method call
-///   can be made.
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
+///   but contains an invalid or unsupported CBOR sequence.
+/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
+///   descriptor reference to a descriptor that is not open.
+/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+///   table is too full and some descriptors must be closed before another method call can be made.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 pub async fn value_indexed_write<
 	'invoker,
 	'buffer,
@@ -526,20 +523,19 @@ pub async fn value_indexed_write<
 /// CBOR-encodable object of parameters to pass to the method.
 ///
 /// # Errors
-/// * [`CborDecode`](oc_wasm_safe::error::Error::CborDecode) is returned if the `params` parameter
-///   is present but contains an invalid or unsupported CBOR sequence.
-/// * [`BadDescriptor`](oc_wasm_safe::error::Error::BadDescriptor) is returned if the parameters
-///   contain a descriptor reference to a descriptor that is not open.
-/// * [`TooManyDescriptors`](oc_wasm_safe::error::Error::TooManyDescriptors) is returned if the
-///   descriptor table is too full and some descriptors must be closed before another method call
-///   can be made.
-/// * [`NoSuchComponent`](oc_wasm_safe::error::Error::NoSuchComponent) is returned if the method
-///   call failed because the component does not exist or is inaccessible.
-/// * [`NoSuchMethod`](oc_wasm_safe::error::Error::NoSuchMethod) is returned if the method call
-///   failed because the method does not exist on the component.
-/// * [`BadParameters`](oc_wasm_safe::error::Error::BadParameters) is returned if the parameters
-///   provided when starting the call are not acceptable for the method.
-/// * [`Other`](oc_wasm_safe::error::Error::Other) is returned if the method call failed.
+/// * [`CborDecode`](MethodCallError::CborDecode) is returned if the `params` parameter is present
+///   but contains an invalid or unsupported CBOR sequence.
+/// * [`BadDescriptor`](MethodCallError::BadDescriptor) is returned if the parameters contain a
+///   descriptor reference to a descriptor that is not open.
+/// * [`TooManyDescriptors`](MethodCallError::TooManyDescriptors) is returned if the descriptor
+///   table is too full and some descriptors must be closed before another method call can be made.
+/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
+///   because the component does not exist or is inaccessible.
+/// * [`NoSuchMethod`](MethodCallError::NoSuchMethod) is returned if the method call failed because
+///   the method does not exist on the component.
+/// * [`BadParameters`](MethodCallError::BadParameters) is returned if the parameters provided when
+///   starting the call are not acceptable for the method.
+/// * [`Other`](MethodCallError::Other) is returned if the method call failed.
 pub async fn value_method<
 	'invoker,
 	'buffer,
