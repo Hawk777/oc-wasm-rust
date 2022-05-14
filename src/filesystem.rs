@@ -5,7 +5,7 @@ use crate::error::Error;
 use crate::helpers::{max_usize, Ignore, OneValue, TwoValues};
 use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	descriptor, Address,
@@ -36,10 +36,10 @@ impl Filesystem {
 	}
 }
 
-impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Filesystem {
-	type Locked = Locked<'invoker, 'buffer>;
+impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for Filesystem {
+	type Locked = Locked<'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -57,8 +57,8 @@ impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Filesystem {
 /// purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
-/// of the buffer.
-pub struct Locked<'invoker, 'buffer> {
+/// of the buffer. The `B` type is the type of scratch buffer to use.
+pub struct Locked<'invoker, 'buffer, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -66,10 +66,10 @@ pub struct Locked<'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// Returns the filesystem’s label, if it has one.
 	///
 	/// The returned string slice points into, and therefore retains ownership of, the scratch
@@ -78,9 +78,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_label(self) -> Result<Option<&'buffer str>, Error> {
-		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
-				.await?;
+		let ret: OneValue<_> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getLabel",
+			None,
+		)
+		.await?;
 		Ok(ret.0)
 	}
 
@@ -117,9 +122,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_read_only(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isReadOnly", None)
-				.await?;
+		let ret: OneValue<_> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"isReadOnly",
+			None,
+		)
+		.await?;
 		Ok(ret.0)
 	}
 
@@ -146,9 +156,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				}
 			}
 		}
-		let ret: OneValue<Return> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "spaceTotal", None)
-				.await?;
+		let ret: OneValue<Return> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"spaceTotal",
+			None,
+		)
+		.await?;
 		Ok(match ret.0 {
 			Return::Finite(x) => x,
 			Return::Infinite => u64::MAX,
@@ -160,9 +175,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_space_used(&mut self) -> Result<u64, Error> {
-		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "spaceUsed", None)
-				.await?;
+		let ret: OneValue<_> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"spaceUsed",
+			None,
+		)
+		.await?;
 		Ok(ret.0)
 	}
 
@@ -380,13 +400,12 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				} else if exception.is_type("java.io.IOException") {
 					// There appears to be only one non-FileNotFoundException IOException, which is
 					// too many open handles. Just in case, check the message.
-					let len = exception.message_length();
-					self.buffer.resize(len, 0);
-					let message = exception.message(self.buffer).unwrap();
-					if message == "too many open handles" {
-						Err(Error::TooManyDescriptors)
-					} else {
-						Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+					const TOO_MANY_OPEN_HANDLES: &str = "too many open handles";
+					const ERROR_MESSAGE_BUFFER_SIZE: usize = TOO_MANY_OPEN_HANDLES.len();
+					let mut message_buffer = [0_u8; ERROR_MESSAGE_BUFFER_SIZE];
+					match exception.message(&mut message_buffer) {
+						Ok(TOO_MANY_OPEN_HANDLES) => Err(Error::TooManyDescriptors),
+						_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
 					}
 				} else {
 					// No other exceptions appear to be thrown, so if one is, it means we’re
@@ -496,10 +515,12 @@ pub struct ReadHandle {
 	descriptor: descriptor::Owned,
 }
 
-impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle ReadHandle {
-	type Locked = LockedReadHandle<'handle, 'invoker, 'buffer>;
+impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B>
+	for &'handle ReadHandle
+{
+	type Locked = LockedReadHandle<'handle, 'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		LockedReadHandle {
 			handle: self,
 			invoker,
@@ -517,8 +538,9 @@ impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle ReadHa
 /// purposes.
 ///
 /// The `'handle` lifetime is the lifetime of the original file handle. The `'invoker` lifetime is
-/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer.
-pub struct LockedReadHandle<'handle, 'invoker, 'buffer> {
+/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type
+/// is the type of scratch buffer to use.
+pub struct LockedReadHandle<'handle, 'invoker, 'buffer, B: Buffer> {
 	/// The file handle.
 	handle: &'handle ReadHandle,
 
@@ -526,10 +548,10 @@ pub struct LockedReadHandle<'handle, 'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'handle, 'invoker, 'buffer> LockedReadHandle<'handle, 'invoker, 'buffer> {
+impl<'handle, 'invoker, 'buffer, B: Buffer> LockedReadHandle<'handle, 'invoker, 'buffer, B> {
 	/// Seeks to a position in the file and returns the resulting absolute byte position.
 	///
 	/// # Errors
@@ -609,10 +631,12 @@ pub struct WriteHandle {
 	descriptor: descriptor::Owned,
 }
 
-impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle WriteHandle {
-	type Locked = LockedWriteHandle<'handle, 'invoker, 'buffer>;
+impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B>
+	for &'handle WriteHandle
+{
+	type Locked = LockedWriteHandle<'handle, 'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		LockedWriteHandle {
 			handle: self,
 			invoker,
@@ -630,8 +654,9 @@ impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle WriteH
 /// purposes.
 ///
 /// The `'handle` lifetime is the lifetime of the original file handle. The `'invoker` lifetime is
-/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer.
-pub struct LockedWriteHandle<'handle, 'invoker, 'buffer> {
+/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type
+/// is the type of scratch buffer to use.
+pub struct LockedWriteHandle<'handle, 'invoker, 'buffer, B: Buffer> {
 	/// The file handle.
 	handle: &'handle WriteHandle,
 
@@ -639,10 +664,10 @@ pub struct LockedWriteHandle<'handle, 'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
+impl<'handle, 'invoker, 'buffer, B: Buffer> LockedWriteHandle<'handle, 'invoker, 'buffer, B> {
 	/// Seeks to a position in the file and returns the resulting absolute byte position.
 	///
 	/// # Errors
@@ -714,9 +739,9 @@ impl<'handle, 'invoker, 'buffer> LockedWriteHandle<'handle, 'invoker, 'buffer> {
 /// # Errors
 /// * [`BadComponent`](Error::BadComponent)
 /// * [`NegativeSeek`](Error::NegativeSeek)
-async fn seek_impl(
+async fn seek_impl<B: Buffer>(
 	invoker: &mut Invoker,
-	buffer: &mut Vec<u8>,
+	buffer: &mut B,
 	address: &Address,
 	descriptor: &descriptor::Owned,
 	basis: Seek,

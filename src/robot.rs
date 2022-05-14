@@ -3,13 +3,12 @@
 use crate::common::{Lockable, RelativeSide, Rgb, Side, TryFromIntError};
 use crate::error::Error;
 use crate::helpers::{FourValues, NullAndStringOr, OneValue, ThreeValues, TwoValues};
-use alloc::vec::Vec;
 use core::convert::TryFrom;
 use core::fmt::{Display, Formatter};
 use core::num::NonZeroU32;
 use core::str::FromStr;
 use minicbor::Decode;
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,
@@ -315,10 +314,10 @@ impl Robot {
 	}
 }
 
-impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Robot {
-	type Locked = Locked<'invoker, 'buffer>;
+impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for Robot {
+	type Locked = Locked<'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -335,8 +334,8 @@ impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Robot {
 /// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
-/// of the buffer.
-pub struct Locked<'invoker, 'buffer> {
+/// of the buffer. The `B` type is the type of scratch buffer to use.
+pub struct Locked<'invoker, 'buffer, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -344,16 +343,16 @@ pub struct Locked<'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// Returns the colour of the robot’s side body light.
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_light_colour(&mut self) -> Result<Rgb, Error> {
-		let ret: OneValue<_> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -369,7 +368,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn set_light_colour(&mut self, colour: Rgb) -> Result<(), Error> {
-		component_method::<_, OneValue<u32>>(
+		component_method::<_, OneValue<u32>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -388,9 +387,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn durability(&mut self) -> Result<Option<f64>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<f64>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "durability", None)
-				.await?;
+		let ret: NullAndStringOr<'_, OneValue<f64>> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"durability",
+			None,
+		)
+		.await?;
 		Ok(match ret {
 			NullAndStringOr::Ok(v) => Some(v.0),
 			NullAndStringOr::Err(_) => None,
@@ -453,7 +457,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn name(self) -> Result<&'buffer str, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -628,7 +632,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn inventory_size(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -646,7 +650,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`NoInventory`](Error::NoInventory)
 	pub async fn selected(&mut self) -> Result<NonZeroU32, Error> {
 		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "select", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "select", None)
 				.await?;
 		match NonZeroU32::new(ret.0) {
 			Some(n) => Ok(n),
@@ -660,7 +664,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn select(&mut self, slot: NonZeroU32) -> Result<(), Error> {
-		let ret = component_method::<_, OneValue<u32>>(
+		let ret = component_method::<_, OneValue<u32>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -681,7 +685,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn count(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -703,7 +707,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn count_selected(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -720,7 +724,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn space(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -742,7 +746,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn space_selected(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -765,7 +769,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn compare_to(&mut self, other_slot: NonZeroU32, nbt: bool) -> Result<bool, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -797,7 +801,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	///   target stack is of a different type and `amount` is less than the size of the source
 	///   stack and therefore the stacks cannot be swapped).
 	pub async fn transfer_to(&mut self, target_slot: NonZeroU32, amount: u32) -> Result<(), Error> {
-		let ret = component_method::<_, OneValue<bool>>(
+		let ret = component_method::<_, OneValue<bool>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -823,7 +827,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn compare(&mut self, side: ActionSide, fuzzy: bool) -> Result<bool, Error> {
-		Ok(component_method::<_, OneValue<_>>(
+		Ok(component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -851,7 +855,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`InventoryFull`](Error::InventoryFull)
 	/// * [`NoItem`](Error::NoItem)
 	pub async fn drop(&mut self, side: ActionSide, count: u32) -> Result<(), Error> {
-		let ret = component_method::<_, TwoValues<bool, Option<&str>>>(
+		let ret = component_method::<_, TwoValues<bool, Option<&str>>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -940,7 +944,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_count(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -958,7 +962,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn selected_tank(&mut self) -> Result<NonZeroU32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -975,7 +979,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn select_tank(&mut self, tank: NonZeroU32) -> Result<(), Error> {
-		let ret = component_method::<_, OneValue<u32>>(
+		let ret = component_method::<_, OneValue<u32>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -996,7 +1000,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn tank_level(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1018,7 +1022,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_level_selected(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1035,7 +1039,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn tank_space(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1058,7 +1062,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn tank_space_selected(&mut self) -> Result<u32, Error> {
-		Ok(component_method::<(), OneValue<_>>(
+		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1078,7 +1082,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	pub async fn compare_fluid_to(&mut self, other_tank: NonZeroU32) -> Result<bool, Error> {
-		let ret = component_method::<_, OneValue<_>>(
+		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1118,7 +1122,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		target_tank: NonZeroU32,
 		amount: u32,
 	) -> Result<(), Error> {
-		let ret = component_method::<_, NullAndStringOr<'_, bool>>(
+		let ret = component_method::<_, NullAndStringOr<'_, bool>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -1161,7 +1165,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		side: ActionSide,
 		tank: NonZeroU32,
 	) -> Result<bool, Error> {
-		let ret = component_method::<_, OneValue<bool>>(
+		let ret = component_method::<_, OneValue<bool>, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

@@ -15,7 +15,7 @@ use crate::helpers::{
 use alloc::vec::Vec;
 use core::num::NonZeroU32;
 use minicbor::{Decode, Decoder};
-use oc_wasm_futures::invoke::{component_method, value_method};
+use oc_wasm_futures::invoke::{component_method, value_method, Buffer};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	descriptor, Address,
@@ -60,10 +60,10 @@ impl Controller {
 	}
 }
 
-impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Controller {
-	type Locked = Locked<'invoker, 'buffer>;
+impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for Controller {
+	type Locked = Locked<'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -86,8 +86,8 @@ impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Controller {
 /// must be passed if operating on an upgrade module installed in a robot or drone.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
-/// of the buffer.
-pub struct Locked<'invoker, 'buffer> {
+/// of the buffer. The `B` type is the type of scratch buffer to use.
+pub struct Locked<'invoker, 'buffer, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -95,10 +95,10 @@ pub struct Locked<'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	// WorldInventoryAnalytics
 
 	/// Returns the number of slots in an inventory.
@@ -629,7 +629,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadItem`](Error::BadItem)
 	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
-			component_method::<(), _>(
+			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
 				&self.address,
@@ -674,7 +674,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadItem`](Error::BadItem)
 	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
-			component_method::<(), _>(
+			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
 				&self.address,
@@ -726,7 +726,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_selected_slot(self) -> Result<Option<Fluid<'buffer>>, Error> {
 		let ret: OneValue<_> = Self::map_errors(
-			component_method::<(), _>(
+			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
 				&self.address,
@@ -776,7 +776,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		self,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
 		let ret: OneValue<_> = Self::map_errors(
-			component_method::<(), _>(
+			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
 				&self.address,
@@ -866,7 +866,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		self,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: OneValue<_> = Self::map_errors(
-			component_method::<(), _>(
+			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
 				&self.address,
@@ -1277,10 +1277,12 @@ impl<'buffer> Decode<'buffer> for GetAllResult<'buffer> {
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Snapshot(pub descriptor::Owned);
 
-impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle Snapshot {
-	type Locked = LockedSnapshot<'handle, 'invoker, 'buffer>;
+impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B>
+	for &'handle Snapshot
+{
+	type Locked = LockedSnapshot<'handle, 'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		use oc_wasm_safe::descriptor::AsDescriptor;
 		LockedSnapshot {
 			descriptor: self.0.as_descriptor(),
@@ -1299,8 +1301,9 @@ impl<'handle, 'invoker, 'buffer> Lockable<'invoker, 'buffer> for &'handle Snapsh
 /// purposes.
 ///
 /// The `'snapshot` lifetime is the lifetime of the original snapshot. The `'invoker` lifetime is
-/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer.
-pub struct LockedSnapshot<'snapshot, 'invoker, 'buffer> {
+/// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type
+/// is the type of scratch buffer to use.
+pub struct LockedSnapshot<'snapshot, 'invoker, 'buffer, B: Buffer> {
 	/// The descriptor.
 	descriptor: descriptor::Borrowed<'snapshot>,
 
@@ -1308,10 +1311,10 @@ pub struct LockedSnapshot<'snapshot, 'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> {
+impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer, B> {
 	/// Returns the next item stack in the snapshot.
 	///
 	/// If the next slot is empty, `None` is returned.
@@ -1324,7 +1327,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// * [`BadInventorySlot`](Error::BadInventorySlot) is returned if iteration has reached the
 	///   end of the slots.
 	pub async fn next(self) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: Vec<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value::<(), _, _>(
+		let ret: Vec<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value::<(), _, _, _>(
 			self.invoker,
 			self.buffer,
 			&self.descriptor,
@@ -1375,8 +1378,14 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn reset(&mut self) -> Result<(), Error> {
-		value_method::<(), Ignore, _>(self.invoker, self.buffer, &self.descriptor, "reset", None)
-			.await?;
+		value_method::<(), Ignore, _, _>(
+			self.invoker,
+			self.buffer,
+			&self.descriptor,
+			"reset",
+			None,
+		)
+		.await?;
 		Ok(())
 	}
 
@@ -1389,7 +1398,7 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn count(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> =
-			value_method::<(), _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
+			value_method::<(), _, _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -1407,9 +1416,14 @@ impl<'snapshot, 'invoker, 'buffer> LockedSnapshot<'snapshot, 'invoker, 'buffer> 
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_all(self) -> Result<Vec<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<GetAllResult<'buffer>> =
-			value_method::<(), _, _>(self.invoker, self.buffer, &self.descriptor, "getAll", None)
-				.await?;
+		let ret: OneValue<GetAllResult<'buffer>> = value_method::<(), _, _, _>(
+			self.invoker,
+			self.buffer,
+			&self.descriptor,
+			"getAll",
+			None,
+		)
+		.await?;
 		Ok(ret.0 .0)
 	}
 }

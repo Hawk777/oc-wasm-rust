@@ -3,9 +3,8 @@
 use crate::common::{Colour, Lockable, Side, BLOCK_SIDES, COLOURS};
 use crate::error::Error;
 use crate::helpers::{Ignore, OneValue, ThreeValues, TwoValues};
-use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for redstone components.
@@ -33,10 +32,10 @@ impl Redstone {
 	}
 }
 
-impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Redstone {
-	type Locked = Locked<'invoker, 'buffer>;
+impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for Redstone {
+	type Locked = Locked<'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -54,8 +53,8 @@ impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Redstone {
 /// other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
-/// of the buffer.
-pub struct Locked<'invoker, 'buffer> {
+/// of the buffer. The `B` type is the type of scratch buffer to use.
+pub struct Locked<'invoker, 'buffer, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -63,10 +62,10 @@ pub struct Locked<'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// Returns the signal strengths received on all six sides.
 	///
 	/// The returned array is indexed by side. For a redstone block, the indices should be
@@ -283,7 +282,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 				ArrayAsMap(levels[4]),
 				ArrayAsMap(levels[5]),
 			]));
-		component_method::<_, Ignore>(
+		component_method::<_, Ignore, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -311,7 +310,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 		levels: &[Option<u8>; COLOURS],
 	) -> Result<(), Error> {
 		let side: u8 = side.into();
-		component_method::<_, Ignore>(
+		component_method::<_, Ignore, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -384,7 +383,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_wake_threshold(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<_> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -419,7 +418,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 
 	async fn get_vanilla(&mut self, method: &str) -> Result<[u8; BLOCK_SIDES], Error> {
 		let ret: OneValue<ArrayAsMap<u8, BLOCK_SIDES>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok(ret.0 .0)
 	}
@@ -438,7 +437,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 
 	async fn get_bundled(&mut self, method: &str) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
 		let ret: OneValue<ArrayAsMap<ArrayAsMap<u8, COLOURS>, BLOCK_SIDES>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok([
 			ret.0 .0[0].0,

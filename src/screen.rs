@@ -4,7 +4,7 @@ use crate::common::{Dimension, Lockable};
 use crate::error::Error;
 use crate::helpers::{NullAndStringOr, OneValue, TwoValues};
 use alloc::vec::Vec;
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for screen components.
@@ -32,10 +32,10 @@ impl Screen {
 	}
 }
 
-impl<'a> Lockable<'a, 'a> for Screen {
-	type Locked = Locked<'a>;
+impl<'a, B: 'a + Buffer> Lockable<'a, 'a, B> for Screen {
+	type Locked = Locked<'a, B>;
 
-	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -51,8 +51,9 @@ impl<'a> Lockable<'a, 'a> for Screen {
 /// can be created by calling [`Screen::lock`](Screen::lock), and it can be dropped to return the
 /// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
-/// The `'a` lifetime is the lifetime of the invoker and the buffer.
-pub struct Locked<'a> {
+/// The `'a` lifetime is the lifetime of the invoker and the buffer. The `B` type is the type of
+/// scratch buffer to use.
+pub struct Locked<'a, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -60,17 +61,17 @@ pub struct Locked<'a> {
 	invoker: &'a mut Invoker,
 
 	/// The buffer.
-	buffer: &'a mut Vec<u8>,
+	buffer: &'a mut B,
 }
 
-impl<'a> Locked<'a> {
+impl<'a, B: Buffer> Locked<'a, B> {
 	/// Checks whether the screen is powered on or off.
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_on(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isOn", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "isOn", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -81,7 +82,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn turn_on(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOn", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOn", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -92,7 +93,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn turn_off(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "turnOff", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOff", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -102,7 +103,7 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_aspect_ratio(&mut self) -> Result<Dimension, Error> {
-		let ret: TwoValues<f64, f64> = component_method::<(), _>(
+		let ret: TwoValues<f64, f64> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -125,7 +126,7 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_keyboards(&mut self) -> Result<Vec<Address>, Error> {
-		let ret: OneValue<_> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -166,9 +167,14 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_precise(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "isPrecise", None)
-				.await?;
+		let ret: OneValue<_> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"isPrecise",
+			None,
+		)
+		.await?;
 		Ok(ret.0)
 	}
 
@@ -195,7 +201,7 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn is_touch_mode_inverted(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

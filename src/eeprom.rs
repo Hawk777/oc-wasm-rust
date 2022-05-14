@@ -3,9 +3,8 @@
 use crate::common::Lockable;
 use crate::error::Error;
 use crate::helpers::{Ignore, NullAndStringOr, OneValue};
-use alloc::vec::Vec;
 use minicbor::bytes::ByteSlice;
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,
@@ -36,10 +35,10 @@ impl Eeprom {
 	}
 }
 
-impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Eeprom {
-	type Locked = Locked<'invoker, 'buffer>;
+impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for Eeprom {
+	type Locked = Locked<'invoker, 'buffer, B>;
 
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -56,8 +55,8 @@ impl<'invoker, 'buffer> Lockable<'invoker, 'buffer> for Eeprom {
 /// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
-/// of the buffer.
-pub struct Locked<'invoker, 'buffer> {
+/// of the buffer. The `B` type is the type of scratch buffer to use.
+pub struct Locked<'invoker, 'buffer, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -65,10 +64,10 @@ pub struct Locked<'invoker, 'buffer> {
 	invoker: &'invoker mut Invoker,
 
 	/// The buffer.
-	buffer: &'buffer mut Vec<u8>,
+	buffer: &'buffer mut B,
 }
 
-impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
+impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// Returns the contents of the main storage area.
 	///
 	/// In an EEPROM used for booting, the main storage area contains the BIOS code.
@@ -80,7 +79,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "get", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "get", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -120,9 +119,14 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_label(self) -> Result<&'buffer str, Error> {
-		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getLabel", None)
-				.await?;
+		let ret: OneValue<_> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getLabel",
+			None,
+		)
+		.await?;
 		Ok(ret.0)
 	}
 
@@ -157,7 +161,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_size(&mut self) -> Result<usize, Error> {
 		let ret: OneValue<_> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getSize", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getSize", None)
 				.await?;
 		Ok(ret.0)
 	}
@@ -167,7 +171,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_checksum(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<&'_ str> = component_method::<(), _>(
+		let ret: OneValue<&'_ str> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -216,7 +220,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_data_size(&mut self) -> Result<usize, Error> {
-		let ret: OneValue<_> = component_method::<(), _>(
+		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -239,7 +243,7 @@ impl<'invoker, 'buffer> Locked<'invoker, 'buffer> {
 	/// * [`BadComponent`](Error::BadComponent)
 	pub async fn get_data(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getData", None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getData", None)
 				.await?;
 		Ok(ret.0)
 	}

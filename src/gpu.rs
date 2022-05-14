@@ -3,10 +3,9 @@
 use crate::common::{Dimension, Lockable, Point, Rgb, Vector2};
 use crate::error::Error;
 use crate::helpers::{FiveValues, Ignore, NullAndStringOr, OneValue, TwoValues};
-use alloc::vec::Vec;
 use core::fmt::{Debug, Formatter};
 use minicbor::Encode;
-use oc_wasm_futures::invoke::component_method;
+use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,
@@ -37,10 +36,10 @@ impl Gpu {
 	}
 }
 
-impl<'a> Lockable<'a, 'a> for Gpu {
-	type Locked = Locked<'a>;
+impl<'a, B: 'a + Buffer> Lockable<'a, 'a, B> for Gpu {
+	type Locked = Locked<'a, B>;
 
-	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut Vec<u8>) -> Self::Locked {
+	fn lock(&self, invoker: &'a mut Invoker, buffer: &'a mut B) -> Self::Locked {
 		Locked {
 			address: self.0,
 			invoker,
@@ -56,8 +55,9 @@ impl<'a> Lockable<'a, 'a> for Gpu {
 /// can be created by calling [`Gpu::lock`](Gpu::lock), and it can be dropped to return the borrow
 /// of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
-/// The `'a` lifetime is the lifetime of the invoker and the buffer.
-pub struct Locked<'a> {
+/// The `'a` lifetime is the lifetime of the invoker and the buffer. The `B` type is the type of
+/// scratch buffer to use.
+pub struct Locked<'a, B: Buffer> {
 	/// The component address.
 	address: Address,
 
@@ -65,10 +65,10 @@ pub struct Locked<'a> {
 	invoker: &'a mut Invoker,
 
 	/// The buffer.
-	buffer: &'a mut Vec<u8>,
+	buffer: &'a mut B,
 }
 
-impl<'a> Locked<'a> {
+impl<'a, B: Buffer> Locked<'a, B> {
 	/// Binds the GPU to a screen.
 	///
 	/// If `reset` is `true`, then the screen is reset to its maximum resolution and colour depth,
@@ -98,9 +98,14 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getScreen", None)
-				.await?;
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getScreen",
+			None,
+		)
+		.await?;
 		Ok(match ret {
 			NullAndStringOr::Ok(ret) => ret.0,
 			NullAndStringOr::Err(_) => None,
@@ -202,9 +207,14 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "maxDepth", None)
-				.await?;
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"maxDepth",
+			None,
+		)
+		.await?;
 		let ret = Self::map_no_screen(ret)?;
 		Ok(ret.0)
 	}
@@ -215,9 +225,14 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, "getDepth", None)
-				.await?;
+		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getDepth",
+			None,
+		)
+		.await?;
 		let ret = Self::map_no_screen(ret)?;
 		Ok(ret.0)
 	}
@@ -484,13 +499,12 @@ impl<'a> Locked<'a> {
 				// IllegalArgumentException, in this case, which maps to Other. Just in case they
 				// make it more sane later, check both! And for more certainty, check the message
 				// too.
-				let len = exception.message_length();
-				self.buffer.resize(len, 0);
-				let message = exception.message(self.buffer).unwrap();
-				if message == "invalid fill value" {
-					Err(Error::BadFillCharacter)
-				} else {
-					Err(Error::BadComponent(e.into()))
+				const INVALID_FILL_VALUE: &str = "invalid fill value";
+				const ERROR_MESSAGE_BUFFER_SIZE: usize = INVALID_FILL_VALUE.len();
+				let mut message_buffer = [0_u8; ERROR_MESSAGE_BUFFER_SIZE];
+				match exception.message(&mut message_buffer) {
+					Ok(INVALID_FILL_VALUE) => Err(Error::BadFillCharacter),
+					_ => Err(Error::BadComponent(e.into())),
 				}
 			}
 			Err(e) => {
@@ -505,10 +519,10 @@ impl<'a> Locked<'a> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
-	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a Vec which cannot fail.
+	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a buffer which cannot fail.
 	async fn get_colour(&mut self, method: &str) -> Result<Colour, Error> {
 		let ret: NullAndStringOr<'_, TwoValues<u32, bool>> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		let ret = Self::map_no_screen(ret)?;
 		Ok(if ret.1 {
@@ -524,7 +538,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
-	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a Vec which cannot fail.
+	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a buffer which cannot fail.
 	async fn set_colour(
 		&mut self,
 		colour: Colour,
@@ -554,7 +568,7 @@ impl<'a> Locked<'a> {
 	/// * [`BadScreen`](Error::BadScreen)
 	async fn get_dimension(&mut self, method: &str) -> Result<Dimension, Error> {
 		let ret: NullAndStringOr<'_, Dimension> =
-			component_method::<(), _>(self.invoker, self.buffer, &self.address, method, None)
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		let ret = Self::map_no_screen(ret)?;
 		Ok(ret)
@@ -610,7 +624,7 @@ impl<'a> Locked<'a> {
 	}
 }
 
-impl Debug for Locked<'_> {
+impl<B: Buffer> Debug for Locked<'_, B> {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
 		Gpu::new(self.address).fmt(f)
 	}

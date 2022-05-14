@@ -2,7 +2,7 @@
 //! [OpenComputers](https://oc.cil.li) in a vanilla Minecraft environment (e.g. redstone blocks,
 //! GPUs, screens, etc.).
 //!
-//! As a general rule, APIs in this crate accept an `Invoker` and a `Vec<u8>` scratch buffer, the
+//! As a general rule, APIs in this crate accept an `Invoker` and a `Buffer` scratch buffer, the
 //! latter being used for encoding parameters and decoding return values. This buffer can be reused
 //! between API calls to reduce heap allocations. In some cases the return value of an API may
 //! borrow from the scratch buffer.
