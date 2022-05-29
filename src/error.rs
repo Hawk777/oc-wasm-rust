@@ -99,6 +99,12 @@ pub enum Error {
 	/// There are too many open descriptors.
 	TooManyDescriptors,
 
+	/// There are too many listening network ports.
+	TooManyOpenPorts,
+
+	/// There are too many parts in a packet.
+	TooManyParts,
+
 	/// The operation is not supported for this component.
 	///
 	/// For example:
@@ -144,6 +150,8 @@ impl Error {
 			Self::NotEnoughEnergy => "not enough energy",
 			Self::StorageReadOnly => "storage is read-only",
 			Self::TooManyDescriptors => "too many descriptors",
+			Self::TooManyOpenPorts => "too many open ports",
+			Self::TooManyParts => "too many parts",
 			Self::Unsupported => "unsupported",
 			Self::Failed => "failed",
 		}
@@ -184,6 +192,8 @@ impl std::error::Error for Error {
 			| Self::NotEnoughEnergy
 			| Self::StorageReadOnly
 			| Self::TooManyDescriptors
+			| Self::TooManyOpenPorts
+			| Self::TooManyParts
 			| Self::Unsupported
 			| Self::Failed => None,
 		}
