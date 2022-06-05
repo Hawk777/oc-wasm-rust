@@ -3,10 +3,11 @@
 
 use crate::common::Lockable;
 use crate::error::Error;
-use crate::helpers::{max_usize, OneValue, TwoValues};
+use crate::helpers::max_usize;
 use core::num::NonZeroU16;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{OneValue, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,

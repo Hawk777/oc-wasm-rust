@@ -2,13 +2,13 @@
 
 use crate::common::{Lockable, RelativeSide, Rgb, Side, TryFromIntError};
 use crate::error::Error;
-use crate::helpers::{FourValues, NullAndStringOr, OneValue, ThreeValues, TwoValues};
 use core::convert::TryFrom;
 use core::fmt::{Display, Formatter};
 use core::num::NonZeroU32;
 use core::str::FromStr;
 use minicbor::Decode;
 use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{error::NullAndStringOr, FourValues, OneValue, ThreeValues, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,

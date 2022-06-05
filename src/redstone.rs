@@ -2,9 +2,10 @@
 
 use crate::common::{Colour, Lockable, Side, BLOCK_SIDES, COLOURS};
 use crate::error::Error;
-use crate::helpers::{Ignore, OneValue, ThreeValues, TwoValues};
+use crate::helpers::Ignore;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{OneValue, ThreeValues, TwoValues};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for redstone components.

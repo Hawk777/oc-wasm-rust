@@ -2,9 +2,9 @@
 
 use crate::common::{Dimension, Lockable};
 use crate::error::Error;
-use crate::helpers::{NullAndStringOr, OneValue, TwoValues};
 use alloc::vec::Vec;
 use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{error::NullAndStringOr, OneValue, TwoValues};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for screen components.

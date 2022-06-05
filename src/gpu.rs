@@ -2,10 +2,11 @@
 
 use crate::common::{Dimension, Lockable, Point, Rgb, Vector2};
 use crate::error::Error;
-use crate::helpers::{FiveValues, Ignore, NullAndStringOr, OneValue, TwoValues};
+use crate::helpers::Ignore;
 use core::fmt::{Debug, Formatter};
 use minicbor::Encode;
 use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{error::NullAndStringOr, FiveValues, OneValue, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,

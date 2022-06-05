@@ -7,14 +7,17 @@
 
 use crate::common::{Lockable, RelativeSide, Side};
 use crate::error::Error;
-use crate::helpers::{
-	max_of_usizes, FiveValues, FourValues, Ignore, NullAndStringOr, OneValue, ThreeValues,
-	TwoValues,
-};
+use crate::helpers::{max_of_usizes, Ignore};
 use alloc::vec::Vec;
 use core::num::NonZeroU32;
 use minicbor::{Decode, Decoder};
 use oc_wasm_futures::invoke::{component_method, value_method, Buffer};
+use oc_wasm_helpers::{
+	error::NullAndStringOr,
+	fluid::{Fluid, Tank},
+	inventory::{ItemStack, OptionItemStack},
+	FiveValues, FourValues, OneValue, ThreeValues, TwoValues,
+};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	descriptor, Address,
@@ -552,9 +555,9 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		side: impl Side,
 		tank: NonZeroU32,
-	) -> Result<Option<FluidInTank<'buffer>>, Error> {
+	) -> Result<Tank<'buffer>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<OptionFluidInTank<'buffer>> = Self::map_errors(
+		let ret: OneValue<Tank<'buffer>> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -564,7 +567,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			)
 			.await,
 		)?;
-		Ok(ret.0 .0)
+		Ok(ret.0)
 	}
 
 	/// Returns the fluids in all tanks in a block.
@@ -577,12 +580,9 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NoInventory`](Error::NoInventory)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
-	pub async fn get_fluids_in_tanks(
-		self,
-		side: impl Side,
-	) -> Result<Vec<Option<FluidInTank<'buffer>>>, Error> {
+	pub async fn get_fluids_in_tanks(self, side: impl Side) -> Result<Vec<Tank<'buffer>>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<GetFluidsInTanksResult<'buffer>> = Self::map_errors(
+		let ret: OneValue<Vec<Tank<'buffer>>> = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
@@ -592,7 +592,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			)
 			.await,
 		)?;
-		Ok(ret.0 .0)
+		Ok(ret.0)
 	}
 
 	// TankInventoryControl
@@ -1128,121 +1128,6 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	}
 }
 
-/// Information about an item stack.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
-/// refers.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct ItemStack<'buffer> {
-	/// The internal (Minecraft system) name of the item.
-	///
-	/// For example, this might be `minecraft:cobblestone`.
-	pub name: &'buffer str,
-
-	/// The human-readable name of the item.
-	///
-	/// For example, this might be `Cobblestone`.
-	pub label: &'buffer str,
-
-	/// The number of items in the stack.
-	pub size: u32,
-
-	/// The maximum number of items that can be held in the stack.
-	pub max_size: u32,
-
-	/// The damage value of the item, if it is a tool, or zero if not.
-	pub damage: u32,
-
-	/// The damage value at which the item breaks, if it is a tool, or zero if not.
-	pub max_damage: u32,
-
-	/// Whether the item has extra NBT data attached.
-	pub has_tag: bool,
-}
-
-impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		// The CBOR fits in memory, so it must be <2³² elements.
-		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?
-			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
-		let mut name: Option<&'buffer str> = None;
-		let mut label: Option<&'buffer str> = None;
-		let mut size: Option<u32> = None;
-		let mut max_size: Option<u32> = None;
-		let mut damage: Option<u32> = None;
-		let mut max_damage: Option<u32> = None;
-		let mut has_tag: Option<bool> = None;
-		for _ in 0..len {
-			let key = d.str()?;
-			match key {
-				"name" => name = Some(d.str()?),
-				"label" => label = Some(d.str()?),
-				"size" => size = Some(d.u32()?),
-				"maxSize" => max_size = Some(d.u32()?),
-				"damage" => damage = Some(d.u32()?),
-				"maxDamage" => max_damage = Some(d.u32()?),
-				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::message("")),
-			}
-		}
-		if let Some(name) = name {
-			if let Some(label) = label {
-				if let Some(size) = size {
-					if let Some(max_size) = max_size {
-						if let Some(damage) = damage {
-							if let Some(max_damage) = max_damage {
-								if let Some(has_tag) = has_tag {
-									return Ok(Self {
-										name,
-										label,
-										size,
-										max_size,
-										damage,
-										max_damage,
-										has_tag,
-									});
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-		Err(minicbor::decode::Error::message(""))
-	}
-}
-
-/// Information about an item stack which may or may not exist.
-///
-/// This type exists, rather than just using `Option<ItemStack>` directly, because `Option` has a
-/// blanket `Decode` implementation, and we need a different implementation which also maps a
-/// non-null empty map to `None`.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
-/// refers.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct OptionItemStack<'buffer>(Option<ItemStack<'buffer>>);
-
-impl<'buffer> Decode<'buffer> for OptionItemStack<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		if d.datatype()? == minicbor::data::Type::Null {
-			// Null → no itemstack.
-			Ok(Self(None))
-		} else {
-			let mut p = d.probe();
-			if let Ok(Some(0)) = p.map() {
-				// Map with zero elements → no itemstack.
-				d.map()?;
-				Ok(Self(None))
-			} else {
-				// Something else → decode an itemstack.
-				Ok(Self(Some(d.decode()?)))
-			}
-		}
-	}
-}
-
 /// A vector of `ItemStack` objects that is decoded from an index-value map in ascending index
 /// order rather than a CBOR array.
 ///
@@ -1424,225 +1309,5 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 		)
 		.await?;
 		Ok(ret.0 .0)
-	}
-}
-
-/// Information about a fluid in a tank.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
-/// refers.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct FluidInTank<'buffer> {
-	/// The internal (Minecraft system) name of the item.
-	///
-	/// For example, this might be `water`.
-	pub name: &'buffer str,
-
-	/// The human-readable name of the item.
-	///
-	/// For example, this might be `Water`.
-	pub label: &'buffer str,
-
-	/// The number of millibuckets of fluid in the tank.
-	pub amount: u32,
-
-	/// The maximum number of millibuckets the tank can hold.
-	pub capacity: u32,
-
-	/// Whether the fluid has extra NBT data attached.
-	pub has_tag: bool,
-}
-
-impl<'buffer> Decode<'buffer> for FluidInTank<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		// The CBOR fits in memory, so it must be <2³² elements.
-		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?
-			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
-		let mut name: Option<_> = None;
-		let mut label: Option<_> = None;
-		let mut amount: Option<_> = None;
-		let mut capacity: Option<_> = None;
-		let mut has_tag: Option<_> = None;
-		for _ in 0..len {
-			let key = d.str()?;
-			match key {
-				"name" => name = Some(d.str()?),
-				"label" => label = Some(d.str()?),
-				"amount" => amount = Some(d.u32()?),
-				"capacity" => capacity = Some(d.u32()?),
-				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::message("")),
-			}
-		}
-		if let Some(name) = name {
-			if let Some(label) = label {
-				if let Some(amount) = amount {
-					if let Some(capacity) = capacity {
-						if let Some(has_tag) = has_tag {
-							return Ok(Self {
-								name,
-								label,
-								amount,
-								capacity,
-								has_tag,
-							});
-						}
-					}
-				}
-			}
-		}
-		Err(minicbor::decode::Error::message(""))
-	}
-}
-
-/// Information about a fluid.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
-/// refers.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Fluid<'buffer> {
-	/// The internal (Minecraft system) name of the item.
-	///
-	/// For example, this might be `water`.
-	pub name: &'buffer str,
-
-	/// The human-readable name of the item.
-	///
-	/// For example, this might be `Water`.
-	pub label: &'buffer str,
-
-	/// The number of millibuckets of fluid in the container.
-	pub amount: u32,
-
-	/// Whether the fluid has extra NBT data attached.
-	pub has_tag: bool,
-}
-
-impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		// The CBOR fits in memory, so it must be <2³² elements.
-		#[allow(clippy::cast_possible_truncation)]
-		let len = d.map()?
-			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
-		let mut name: Option<_> = None;
-		let mut label: Option<_> = None;
-		let mut amount: Option<_> = None;
-		let mut has_tag: Option<_> = None;
-		for _ in 0..len {
-			let key = d.str()?;
-			match key {
-				"name" => name = Some(d.str()?),
-				"label" => label = Some(d.str()?),
-				"amount" => amount = Some(d.u32()?),
-				"hasTag" => has_tag = Some(d.bool()?),
-				_ => return Err(minicbor::decode::Error::message("")),
-			}
-		}
-		if let Some(name) = name {
-			if let Some(label) = label {
-				if let Some(amount) = amount {
-					if let Some(has_tag) = has_tag {
-						return Ok(Self {
-							name,
-							label,
-							amount,
-							has_tag,
-						});
-					}
-				}
-			}
-		}
-		Err(minicbor::decode::Error::message(""))
-	}
-}
-
-impl<'buffer> From<FluidInTank<'buffer>> for Fluid<'buffer> {
-	fn from(src: FluidInTank<'buffer>) -> Self {
-		Self {
-			name: src.name,
-			label: src.label,
-			amount: src.amount,
-			has_tag: src.has_tag,
-		}
-	}
-}
-
-/// Information about a fluid in a tank which may or may not exist.
-///
-/// This type exists, rather than just using `Option<FluidInTank>` directly, because `Option` has a
-/// blanket `Decode` implementation, and we need a different implementation which also maps a
-/// non-null map containing a skeleton subset of keys to `None`.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
-/// refers.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct OptionFluidInTank<'buffer>(Option<FluidInTank<'buffer>>);
-
-impl<'buffer> Decode<'buffer> for OptionFluidInTank<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		if d.datatype()? == minicbor::data::Type::Null {
-			// Null is not used by OpenComputers AFAIK, but for future-proofing should probably map
-			// to None.
-			d.skip()?;
-			Ok(Self(None))
-		} else {
-			let mut p = d.probe();
-			if let Some(n) = p.map()? {
-				// The CBOR fits in memory, so it must be <2³² elements.
-				#[allow(clippy::cast_possible_truncation)]
-				let n = n as usize;
-				// Map with n elements. Look for an “amount” key.
-				let mut amount_key_seen = false;
-				for _ in 0..n {
-					let key = p.str()?;
-					if key == "amount" {
-						amount_key_seen = true;
-						let value = p.u32()?;
-						if value == 0 {
-							// This is an empty tank.
-							d.skip()?;
-							return Ok(Self(None));
-						}
-					} else {
-						p.skip()?;
-					}
-				}
-				if amount_key_seen {
-					// Map contains an “amount” key and the value is nonzero.
-					Ok(Self(Some(d.decode()?)))
-				} else {
-					// Map that does not contain an “amount” key. Consider this an empty tank.
-					d.skip()?;
-					Ok(Self(None))
-				}
-			} else {
-				// Map of indefinite length. OC-Wasm never writes indefinite-length items.
-				Err(minicbor::decode::Error::message(""))
-			}
-		}
-	}
-}
-
-/// A vector of `Option<FluidInTank>` objects that is decoded from a CBOR array.
-///
-/// Each element is decoded as an `OptionFluidInTank` rather than an `Option<FluidInTank>`.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the objects
-/// refer.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct GetFluidsInTanksResult<'buffer>(Vec<Option<FluidInTank<'buffer>>>);
-
-impl<'buffer> Decode<'buffer> for GetFluidsInTanksResult<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		let len = d.array()?;
-		// The CBOR fits in memory, so it must be <2³² elements.
-		#[allow(clippy::cast_possible_truncation)]
-		let len = len.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
-		let mut ret = Vec::with_capacity(len);
-		for _ in 0..len {
-			ret.push(d.decode::<OptionFluidInTank<'buffer>>()?.0);
-		}
-		Ok(Self(ret))
 	}
 }
