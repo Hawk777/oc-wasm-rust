@@ -1,0 +1,11 @@
+"Lint":
+  stage: test
+  image:
+    name: "rust"
+  script:
+    - rustup target add wasm32-unknown-unknown
+    - rustup component add clippy rustfmt
+    - cargo version
+    - cargo clippy
+    - cargo doc
+    - cargo fmt -- --check

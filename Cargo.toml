@@ -1,0 +1,18 @@
+[package]
+name = "oc-wasm-helpers"
+version = "0.1.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+description = "Helpers used by multiple OC-Wasm high-level APIs"
+repository = "https://gitlab.com/Hawk777/oc-wasm-helpers"
+license = "GPL-3.0-only"
+keywords = ["minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
+[dependencies.minicbor]
+default-features = false
+features = ["derive"]
+version = "^0.15"
+
+[package.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"
