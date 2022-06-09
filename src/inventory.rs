@@ -2,9 +2,8 @@
 //! APIs.
 //!
 //! # Limitations
-//! At this time, only APIs available to computers are supported (APIs specific to drone or robots
-//! are not supported), and database interaction APIs are not supported. They may be added in a
-//! future version.
+//! At this time, database interaction APIs are not supported, and a very few other miscellaneous
+//! APIs are also missing. They may be added in a future version.
 
 use crate::common::{Lockable, RelativeSide, Side};
 use crate::error::Error;
