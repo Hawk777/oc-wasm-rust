@@ -1023,6 +1023,25 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		Ok(ret.0 .0)
 	}
 
+	// UpgradeInventoryController
+
+	/// Swaps the equipped tool with the currently selected inventory slot.
+	///
+	/// # Errors
+	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not have an inventory
+	///   and therefore has no item to equip.
+	pub async fn equip(&mut self) -> Result<(), Error> {
+		let ret: OneValue<bool> =
+			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "equip", None)
+				.await?;
+		if ret.0 {
+			Ok(())
+		} else {
+			Err(Error::NoInventory)
+		}
+	}
+
 	/// Implements the `drain` and `fill` functions.
 	///
 	/// On success, the amount of fluid moved is returned.
