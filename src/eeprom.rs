@@ -1,11 +1,10 @@
 //! Provides high-level access to the EEPROM APIs.
 
-use crate::common::Lockable;
 use crate::error::Error;
 use crate::helpers::Ignore;
 use minicbor::bytes::ByteSlice;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, OneValue};
+use oc_wasm_helpers::{error::NullAndStringOr, Lockable, OneValue};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,

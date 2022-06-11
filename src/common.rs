@@ -1,7 +1,5 @@
 use core::convert::TryFrom;
 use minicbor::{Decode, Encode};
-use oc_wasm_futures::invoke::Buffer;
-use oc_wasm_safe::component::Invoker;
 
 /// An error returned when converting an invalid value to an enumeration.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -233,17 +231,3 @@ impl TryFrom<u8> for Colour {
 /// A 24-bit RGB colour.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Rgb(pub u32);
-
-/// A component that can be given an [`Invoker`](Invoker) and a byte buffer in order to access its
-/// methods.
-pub trait Lockable<'invoker, 'buffer, B: Buffer> {
-	/// The type obtained when locking the component.
-	type Locked;
-
-	/// Locks the component so methods can be invoked on it.
-	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the locked value is dropped.
-	#[must_use = "This function is only useful for its return value"]
-	fn lock(&self, invoker: &'invoker mut Invoker, buffer: &'buffer mut B) -> Self::Locked;
-}

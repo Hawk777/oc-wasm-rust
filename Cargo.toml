@@ -19,7 +19,7 @@ default-features = false
 version = "^0.4"
 
 [dependencies.oc-wasm-helpers]
-version = "^0.1"
+version = "^0.2"
 
 [dependencies.oc-wasm-safe]
 default-features = false

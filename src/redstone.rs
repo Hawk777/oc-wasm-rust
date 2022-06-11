@@ -1,11 +1,11 @@
 //! Provides high-level access to the redstone APIs.
 
-use crate::common::{Colour, Lockable, Side, BLOCK_SIDES, COLOURS};
+use crate::common::{Colour, Side, BLOCK_SIDES, COLOURS};
 use crate::error::Error;
 use crate::helpers::Ignore;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{OneValue, ThreeValues, TwoValues};
+use oc_wasm_helpers::{Lockable, OneValue, ThreeValues, TwoValues};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for redstone components.

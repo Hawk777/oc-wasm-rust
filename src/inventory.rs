@@ -5,7 +5,7 @@
 //! At this time, database interaction APIs are not supported, and a very few other miscellaneous
 //! APIs are also missing. They may be added in a future version.
 
-use crate::common::{Lockable, RelativeSide, Side};
+use crate::common::{RelativeSide, Side};
 use crate::error::Error;
 use crate::helpers::{max_of_usizes, Ignore};
 use alloc::vec::Vec;
@@ -16,7 +16,7 @@ use oc_wasm_helpers::{
 	error::NullAndStringOr,
 	fluid::{Fluid, Tank},
 	inventory::{ItemStack, OptionItemStack},
-	FiveValues, FourValues, OneValue, ThreeValues, TwoValues,
+	FiveValues, FourValues, Lockable, OneValue, ThreeValues, TwoValues,
 };
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
@@ -1147,35 +1147,6 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	}
 }
 
-/// A vector of `ItemStack` objects that is decoded from an index-value map in ascending index
-/// order rather than a CBOR array.
-///
-/// Because of how `getAll` works in OpenComputers, the map indices are one-based instead of
-/// zero-based.
-///
-/// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the objects
-/// refer.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-struct GetAllResult<'buffer>(Vec<ItemStack<'buffer>>);
-
-impl<'buffer> Decode<'buffer> for GetAllResult<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		let len = d.map()?;
-		// The CBOR fits in memory, so it must be <2³² elements.
-		#[allow(clippy::cast_possible_truncation)]
-		let len = len.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
-		let mut ret = Vec::with_capacity(len);
-		for _ in 0..len {
-			let index = d.u32()?;
-			if index as usize != ret.len() + 1 {
-				return Err(minicbor::decode::Error::message(""));
-			}
-			ret.push(d.decode::<ItemStack<'buffer>>()?);
-		}
-		Ok(Self(ret))
-	}
-}
-
 /// A snapshot of the contents of an inventory.
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Snapshot(pub descriptor::Owned);
@@ -1249,8 +1220,8 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 
 	/// Returns a specific item stack in the snapshot.
 	///
-	/// The `slot` parameter ranges from 1 to the inventory size. If the slot does not contain any
-	/// items, a record for `minecraft:air` is returned.
+	/// The `slot` parameter ranges from 1 to the inventory size. If the `slot` parameter is out of
+	/// range, `None` is returned.
 	///
 	/// This method does not have any effect on the “current position” used by [`next`](Self::next)
 	/// and [`reset`](Self::reset).
@@ -1260,20 +1231,15 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`BadInventorySlot`](Error::BadInventorySlot)
-	pub async fn get(self, slot: NonZeroU32) -> Result<ItemStack<'buffer>, Error> {
-		let ret: OneValue<Option<_>> = oc_wasm_futures::invoke::value_indexed_read(
+	pub async fn get(self, slot: NonZeroU32) -> Result<Option<ItemStack<'buffer>>, Error> {
+		let ret: OneValue<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value_indexed_read(
 			self.invoker,
 			self.buffer,
 			&self.descriptor,
 			Some(&OneValue(slot)),
 		)
 		.await?;
-		if let Some(stack) = ret.0 {
-			Ok(stack)
-		} else {
-			Err(Error::BadInventorySlot)
-		}
+		Ok(ret.0.into())
 	}
 
 	/// Rewinds the iterator over slots used by [`next`](Self::next).
@@ -1308,8 +1274,6 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 
 	/// Returns all items in the inventory.
 	///
-	/// If a slot does not contain any items, a record for `minecraft:air` is returned.
-	///
 	/// This method does not have any effect on the “current position” used by [`next`](Self::next)
 	/// and [`reset`](Self::reset).
 	///
@@ -1318,8 +1282,17 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	pub async fn get_all(self) -> Result<Vec<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<GetAllResult<'buffer>> = value_method::<(), _, _, _>(
+	pub async fn get_all(self) -> Result<Vec<Option<ItemStack<'buffer>>>, Error> {
+		#[derive(Decode)]
+		struct Return<'buffer> {
+			#[b(0)]
+			#[cbor(
+				decode_with = "oc_wasm_helpers::decode_one_based_map_as_vector::<OptionItemStack<'_>, Option<ItemStack<'_>>>"
+			)]
+			x: Vec<Option<ItemStack<'buffer>>>,
+		}
+
+		let ret: Return<'buffer> = value_method::<(), _, _, _>(
 			self.invoker,
 			self.buffer,
 			&self.descriptor,
@@ -1327,6 +1300,6 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 			None,
 		)
 		.await?;
-		Ok(ret.0 .0)
+		Ok(ret.x)
 	}
 }

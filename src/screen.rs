@@ -1,10 +1,10 @@
 //! Provides high-level access to the screen APIs.
 
-use crate::common::{Dimension, Lockable};
+use crate::common::Dimension;
 use crate::error::Error;
 use alloc::vec::Vec;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, OneValue, TwoValues};
+use oc_wasm_helpers::{error::NullAndStringOr, Lockable, OneValue, TwoValues};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for screen components.
