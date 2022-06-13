@@ -1,0 +1,39 @@
+[package]
+name = "oc-wasm-immersive"
+version = "0.1.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+description = "High-level APIs for the Immersive family of machines"
+repository = "https://gitlab.com/Hawk777/oc-wasm-immersive"
+license = "GPL-3.0-only"
+keywords = ["immersive", "minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
+[dependencies.bounded-integer]
+features = ["macro"]
+version = "^0.5"
+
+[dependencies.minicbor]
+default-features = false
+features = ["derive"]
+version = "^0.15"
+
+[dependencies.oc-wasm-futures]
+default-features = false
+version = "^0.4"
+
+[dependencies.oc-wasm-helpers]
+default-features = false
+version = "^0.2"
+
+[dependencies.oc-wasm-safe]
+default-features = false
+version = "^0.2.1"
+
+[features]
+default = ["std"]
+alloc = ["oc-wasm-helpers/alloc"]
+std = ["alloc", "bounded-integer/std", "oc-wasm-safe/std"]
+
+[package.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"
