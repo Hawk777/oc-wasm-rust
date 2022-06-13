@@ -496,20 +496,21 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(_) => Ok(()),
 			Err(MethodCallError::BadParameters(exception)) => {
-				if exception.is_type("java.lang.IllegalArgumentException") {
-					const PACKET_HAS_TOO_MANY_PARTS: &str = "packet has too many parts";
-					const PACKET_TOO_BIG_PREFIX: &str = "packet too big";
-					const MESSAGE_BUFFER_SIZE: usize = max_usize(
-						PACKET_HAS_TOO_MANY_PARTS.len(),
-						PACKET_TOO_BIG_PREFIX.len() + 20, /* for the “ (max NNNNN)” part */
-					);
-					let mut message_buffer = [0_u8; MESSAGE_BUFFER_SIZE];
-					match exception.message(&mut message_buffer) {
-						Ok(PACKET_HAS_TOO_MANY_PARTS) => Err(Error::TooManyParts),
-						Ok(m) if m.starts_with(PACKET_TOO_BIG_PREFIX) => Err(Error::DataTooLarge),
-						_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
-					}
-				} else if exception.is_type("java.io.IOException") {
+				const PACKET_HAS_TOO_MANY_PARTS: &str = "packet has too many parts";
+				const PACKET_TOO_BIG_PREFIX: &str = "packet too big";
+				const MESSAGE_BUFFER_SIZE: usize = max_usize(
+					PACKET_HAS_TOO_MANY_PARTS.len(),
+					PACKET_TOO_BIG_PREFIX.len() + 20, /* for the “ (max NNNNN)” part */
+				);
+				let mut message_buffer = [0_u8; MESSAGE_BUFFER_SIZE];
+				match exception.message(&mut message_buffer) {
+					Ok(PACKET_HAS_TOO_MANY_PARTS) => Err(Error::TooManyParts),
+					Ok(m) if m.starts_with(PACKET_TOO_BIG_PREFIX) => Err(Error::DataTooLarge),
+					_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
+				}
+			}
+			Err(e @ MethodCallError::Other(exception)) => {
+				if exception.is_type("java.io.IOException") {
 					const NOT_ENOUGH_ENERGY: &str = "not enough energy";
 					let mut message_buffer = [0_u8; NOT_ENOUGH_ENERGY.len()];
 					match exception.message(&mut message_buffer) {
@@ -517,7 +518,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 						_ => Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown)),
 					}
 				} else {
-					Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
+					Err(e.into())
 				}
 			}
 			Err(e) => Err(e.into()),
