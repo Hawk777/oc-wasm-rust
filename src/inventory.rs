@@ -141,15 +141,23 @@ impl<'buffer> map_decoder::Builder<'buffer> for OptionItemStackBuilder<'buffer> 
 						if let Some(damage) = self.damage {
 							if let Some(max_damage) = self.max_damage {
 								if let Some(has_tag) = self.has_tag {
-									return Ok(OptionItemStack(Some(ItemStack {
-										name,
-										label,
-										size,
-										max_size,
-										damage,
-										max_damage,
-										has_tag,
-									})));
+									// Some APIs map an empty slot to “zero air” instead of an
+									// empty table.
+									return Ok(OptionItemStack(
+										if name == "minecraft:air" && size == 0 {
+											None
+										} else {
+											Some(ItemStack {
+												name,
+												label,
+												size,
+												max_size,
+												damage,
+												max_damage,
+												has_tag,
+											})
+										},
+									));
 								}
 							}
 						}
