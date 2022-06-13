@@ -79,16 +79,16 @@ pub struct FiveValues<T, U, V, W, X>(
 	#[b(4)] pub X,
 );
 
-/// A component that can be given an [`Invoker`](Invoker) and a byte buffer in order to access its
-/// methods.
+/// A component that can be given an [`Invoker`](oc_wasm_safe::component::Invoker) and a byte
+/// buffer in order to access its methods.
 pub trait Lockable<'invoker, 'buffer, B: oc_wasm_futures::invoke::Buffer> {
 	/// The type obtained when locking the component.
 	type Locked;
 
 	/// Locks the component so methods can be invoked on it.
 	///
-	/// The [`Invoker`](Invoker) and a scratch buffer must be provided. They are released and can
-	/// be reused once the locked value is dropped.
+	/// The [`Invoker`](oc_wasm_safe::component::Invoker) and a scratch buffer must be provided.
+	/// They are released and can be reused once the locked value is dropped.
 	#[must_use = "This function is only useful for its return value"]
 	fn lock(
 		&self,
