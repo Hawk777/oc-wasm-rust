@@ -1,6 +1,6 @@
 [package]
 name = "oc-wasm-opencomputers"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Christopher Head <chead@chead.ca>"]
 edition = "2021"
 description = "High-level APIs for OpenComputers components"
