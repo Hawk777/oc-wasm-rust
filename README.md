@@ -1,4 +1,4 @@
-OC-Wasm-OpenComputers provides high-level APIs for accessing components
+OC-Wasm-Immersive provides high-level APIs for accessing components
 provided by [Immersive
 Engineering](https://curseforge.com/minecraft/mc-mods/immersive-engineering)
 and [Immersive
