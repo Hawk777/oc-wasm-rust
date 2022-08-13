@@ -1,6 +1,8 @@
 //! Provides high-level access to the crusher APIs.
 
 use crate::error::Error;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 use minicbor::Decoder;
 use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{

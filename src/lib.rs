@@ -46,6 +46,9 @@
 // Nope, tabs thanks.
 #![allow(clippy::tabs_in_doc_comments)]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 pub mod common;
 pub mod engineering;
 pub mod error;
