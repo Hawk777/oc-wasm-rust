@@ -22,6 +22,9 @@ pub enum Error {
 	/// yet.
 	NotReady,
 
+	/// There are too many open descriptors.
+	TooManyDescriptors,
+
 	/// The operation failed but no more detailed information is available at the type level. The
 	/// individual method may document more specific reasons for this error to appear.
 	Failed,
@@ -36,6 +39,7 @@ impl Error {
 			Self::BadRecipe => "bad recipe",
 			Self::NotComputerControlled => "not computer controlled",
 			Self::NotReady => "not ready",
+			Self::TooManyDescriptors => "too many descriptors",
 			Self::Failed => "failed",
 		}
 	}
@@ -55,7 +59,11 @@ impl std::error::Error for Error {
 	fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
 		match self {
 			Self::BadComponent(underlying) => Some(underlying),
-			Self::BadRecipe | Self::NotComputerControlled | Self::NotReady | Self::Failed => None,
+			Self::BadRecipe
+			| Self::NotComputerControlled
+			| Self::NotReady
+			| Self::TooManyDescriptors
+			| Self::Failed => None,
 		}
 	}
 }
@@ -66,6 +74,7 @@ impl From<oc_wasm_safe::error::Error> for Error {
 			oc_wasm_safe::error::Error::BadParameters | oc_wasm_safe::error::Error::Other => {
 				Self::Failed
 			}
+			oc_wasm_safe::error::Error::TooManyDescriptors => Self::TooManyDescriptors,
 			_ => Self::BadComponent(source),
 		}
 	}
