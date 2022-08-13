@@ -68,6 +68,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<bool> = component_method::<(), _, _>(
 			self.invoker,
@@ -84,6 +85,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn tank(self) -> Result<Tank<'buffer>, Error> {
 		let ret: OneValue<Tank<'buffer>> = component_method::<(), _, _>(
 			self.invoker,
@@ -104,6 +106,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn enable_computer_control(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::enable_computer_control(&self.address, self.invoker, self.buffer, enable)
 			.await
@@ -117,6 +120,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotComputerControlled`](Error::NotComputerControlled)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn set_enabled(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::set_enabled(&self.address, self.invoker, self.buffer, enable).await
 	}

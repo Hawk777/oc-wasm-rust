@@ -73,6 +73,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn input_tank(self, number: TankNumber) -> Result<Tank<'buffer>, Error> {
 		let method = if number.get() == 1 {
 			"getFirstInputTankInfo"
@@ -86,6 +87,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn output_tank(self, number: TankNumber) -> Result<Tank<'buffer>, Error> {
 		let method = if number.get() == 1 {
 			"getFirstOutputTankInfo"
@@ -99,6 +101,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	async fn tank(self, method: &str) -> Result<Tank<'buffer>, Error> {
 		let ret: OneValue<Tank<'buffer>> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
@@ -114,6 +117,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn enable_computer_control(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::enable_computer_control(&self.address, self.invoker, self.buffer, enable)
 			.await
@@ -127,6 +131,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotComputerControlled`](Error::NotComputerControlled)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn set_enabled(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::set_enabled(&self.address, self.invoker, self.buffer, enable).await
 	}

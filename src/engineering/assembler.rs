@@ -90,6 +90,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadRecipe`](Error::BadRecipe)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn has_ingredients(&mut self, slot: RecipeSlot) -> Result<bool, Error> {
 		let ret: Result<OneValue<bool>, oc_wasm_safe::component::MethodCallError<'_>> =
 			component_method(
@@ -129,6 +130,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn recipe(self, slot: RecipeSlot) -> Result<Recipe<'buffer>, Error> {
 		let ret: OneValue<Recipe<'buffer>> = component_method(
 			self.invoker,
@@ -147,6 +149,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn is_valid_recipe(&mut self, slot: RecipeSlot) -> Result<bool, Error> {
 		let ret: OneValue<bool> = component_method(
 			self.invoker,
@@ -163,6 +166,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn tank(self, tank: TankNumber) -> Result<Tank<'buffer>, Error> {
 		let ret: OneValue<Tank<'buffer>> = component_method(
 			self.invoker,
@@ -179,6 +183,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -195,6 +200,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -211,6 +217,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn stack_in_slot(
 		self,
 		slot: ItemStorageSlot,
@@ -230,6 +237,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn buffer_stack(self, slot: RecipeSlot) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
 			self.invoker,
@@ -254,6 +262,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn enable_computer_control(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::enable_computer_control(&self.address, self.invoker, self.buffer, enable)
 			.await
@@ -267,6 +276,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn set_enabled(&mut self, slot: RecipeSlot, enable: bool) -> Result<(), Error> {
 		component_method(
 			self.invoker,
