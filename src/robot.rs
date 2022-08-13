@@ -353,6 +353,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_light_colour(&mut self) -> Result<Rgb, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -369,6 +370,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_light_colour(&mut self, colour: Rgb) -> Result<(), Error> {
 		component_method::<_, OneValue<u32>, _>(
 			self.invoker,
@@ -388,6 +390,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn durability(&mut self) -> Result<Option<f64>, Error> {
 		let ret: NullAndStringOr<'_, OneValue<f64>> = component_method::<(), _, _>(
 			self.invoker,
@@ -412,6 +415,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`Blocked`](Error::Blocked)
 	/// * [`ImpossibleMove`](Error::ImpossibleMove)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn move_robot(&mut self, direction: MoveDirection) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, OneValue<bool>> = component_method(
 			self.invoker,
@@ -436,6 +440,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn(&mut self, direction: Rotation) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, OneValue<bool>> = component_method(
 			self.invoker,
@@ -458,6 +463,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn name(self) -> Result<&'buffer str, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -481,6 +487,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem) is returned if the block in the target location is too hard
 	///   for the equipped tool to break, or the tool is of the wrong kind (for example, a shovel
 	///   swinging at cobblestone).
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn swing(
 		&mut self,
 		side: ActionSide,
@@ -524,6 +531,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the item is not usable (for example, if it is a
 	///   piece of coal), is usable on certain entities but such entities are not present (for
 	///   example, if it is a shears and there is nothing in front of the robot or the entity in
@@ -579,6 +587,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadItem`](Error::BadItem) is returned if there is no item selected.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the selected item does not have a placeable
 	///   block form (e.g. it is a tool instead); the target location is obstructed by an existing
 	///   block; there is no existing block adjacent to the target placement location and the robot
@@ -617,6 +626,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn detect(&mut self, side: ActionSide) -> Result<BlockContent, Error> {
 		let ret: TwoValues<bool, &str> = component_method(
 			self.invoker,
@@ -633,6 +643,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn inventory_size(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -650,6 +661,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn selected(&mut self) -> Result<NonZeroU32, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "select", None)
@@ -665,6 +677,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn select(&mut self, slot: NonZeroU32) -> Result<(), Error> {
 		let ret = component_method::<_, OneValue<u32>, _>(
 			self.invoker,
@@ -677,6 +690,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(_) => Ok(()),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -686,6 +700,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn count(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -698,6 +713,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(n)) => Ok(n),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -708,6 +724,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn count_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -725,6 +742,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn space(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -737,6 +755,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(n)) => Ok(n),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -747,6 +766,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn space_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -770,6 +790,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn compare_to(&mut self, other_slot: NonZeroU32, nbt: bool) -> Result<bool, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -782,6 +803,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(f)) => Ok(f),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -798,6 +820,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if `amount` was nonzero but no items could be moved
 	///   (because the source stack is empty, the target stack is of the same type and full, or the
 	///   target stack is of a different type and `amount` is less than the size of the source
@@ -815,6 +838,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			Ok(OneValue(true)) => Ok(()),
 			Ok(OneValue(false)) => Err(Error::Failed),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -828,6 +852,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn compare(&mut self, side: ActionSide, fuzzy: bool) -> Result<bool, Error> {
 		Ok(component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -856,6 +881,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`InventoryFull`](Error::InventoryFull)
 	/// * [`NoItem`](Error::NoItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn drop(&mut self, side: ActionSide, count: u32) -> Result<(), Error> {
 		let ret = component_method::<_, TwoValues<bool, Option<&str>>, _>(
 			self.invoker,
@@ -872,6 +898,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			Ok(TwoValues(false, Some(_))) => {
 				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 			}
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -901,6 +928,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if there are no items in the specified direction,
 	///   there is no space to move the items into (due to either number or type), or the adjacent
 	///   inventory does not allow items to be removed.
@@ -945,6 +973,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank_count(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -963,6 +992,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn selected_tank(&mut self) -> Result<NonZeroU32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -980,6 +1010,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn select_tank(&mut self, tank: NonZeroU32) -> Result<(), Error> {
 		let ret = component_method::<_, OneValue<u32>, _>(
 			self.invoker,
@@ -992,6 +1023,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(_) => Ok(()),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -1001,6 +1033,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank_level(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -1013,6 +1046,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(n)) => Ok(n),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -1023,6 +1057,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank_level_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -1040,6 +1075,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank_space(&mut self, tank: NonZeroU32) -> Result<u32, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -1052,6 +1088,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(n)) => Ok(n),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -1063,6 +1100,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank_space_selected(&mut self) -> Result<u32, Error> {
 		Ok(component_method::<(), OneValue<_>, _>(
 			self.invoker,
@@ -1083,6 +1121,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn compare_fluid_to(&mut self, other_tank: NonZeroU32) -> Result<bool, Error> {
 		let ret = component_method::<_, OneValue<_>, _>(
 			self.invoker,
@@ -1095,6 +1134,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(f)) => Ok(f),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::BadInventorySlot),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -1114,6 +1154,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the requested tank number is greater than the
 	///   tank count, or `amount` was nonzero but no fluid could be moved (because the source tank
 	///   is empty, the target tank is of the same type and full, or the target tank is of a
@@ -1162,6 +1203,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   block on the specified side or if the `tank` parameter is greater than the number of
 	///   tanks in the block and the selected internal tank is nonempty, but only if the selected
 	///   tank is non-empty.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn compare_fluid(
 		&mut self,
 		side: ActionSide,
@@ -1194,6 +1236,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   incompatible fluid.
 	/// * [`InventoryFull`](Error::InventoryFull)
 	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn drain(&mut self, side: ActionSide, amount: u32) -> Result<u32, Error> {
 		self.drain_or_fill(side, amount, "drain").await
 	}
@@ -1211,6 +1254,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
 	/// * [`NoItem`](Error::NoItem) is returned if the source tank is empty and `amount` is
 	///   nonzero.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn fill(&mut self, side: ActionSide, amount: u32) -> Result<u32, Error> {
 		self.drain_or_fill(side, amount, "fill").await
 	}
@@ -1225,6 +1269,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not contain any tanks.
 	/// * [`NoItem`](Error::NoItem) is returned if the source tank is empty and `amount` is
 	///   nonzero.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn drain_or_fill(
 		&mut self,
 		side: ActionSide,

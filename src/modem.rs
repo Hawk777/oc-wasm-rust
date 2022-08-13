@@ -305,6 +305,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_wireless(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -321,6 +322,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_open(&mut self, port: NonZeroU16) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,
@@ -340,6 +342,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyOpenPorts`](Error::TooManyOpenPorts)
 	pub async fn open(&mut self, port: NonZeroU16) -> Result<bool, Error> {
 		let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
@@ -375,6 +378,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn close(&mut self, port: NonZeroU16) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,
@@ -394,6 +398,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn close_all(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "close", None)
@@ -407,6 +412,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`DataTooLarge`](Error::DataTooLarge)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyParts`](Error::TooManyParts)
 	pub async fn send(
 		&mut self,
@@ -450,6 +456,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`DataTooLarge`](Error::DataTooLarge)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyParts`](Error::TooManyParts)
 	pub async fn broadcast(
 		&mut self,
@@ -482,6 +489,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`DataTooLarge`](Error::DataTooLarge)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyParts`](Error::TooManyParts)
 	async fn do_send<P: Encode>(&mut self, method: &str, params: &P) -> Result<(), Error> {
 		let ret: Result<OneValue<bool>, MethodCallError<'_>> = component_method(
@@ -529,6 +537,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the component is not a wireless
 	///   network card, including if it is an ordinary wired network card.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_strength(&mut self) -> Result<f64, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -548,6 +557,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned if the component is not a wireless
 	///   network card, including if it is an ordinary wired network card.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_strength(&mut self, strength: f64) -> Result<f64, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,
@@ -564,6 +574,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_wake_message(self) -> Result<WakeMessage<'buffer>, Error> {
 		let ret = component_method::<(), _, _>(
 			self.invoker,
@@ -582,6 +593,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_wake_message(
 		self,
 		config: WakeMessage<'_>,

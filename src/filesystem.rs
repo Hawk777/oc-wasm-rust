@@ -77,6 +77,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_label(self) -> Result<Option<&'buffer str>, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -98,6 +99,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`StorageReadOnly`](Error::StorageReadOnly) is returned if this filesystem has a label
 	///   that cannot be changed.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) is returned if this filesystem does not support
 	///   labels.
 	pub async fn set_label(self, label: Option<&str>) -> Result<Option<&'buffer str>, Error> {
@@ -112,6 +114,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(label)) => Ok(label),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::StorageReadOnly),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(MethodCallError::Other(_)) => Err(Error::Unsupported),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
@@ -121,6 +124,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_read_only(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -137,6 +141,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_space_total(&mut self) -> Result<u64, Error> {
 		// The component call returns a u64 if the filesystem has a capacity limit, or an f64 equal
 		// to infinity if it doesn’t.
@@ -174,6 +179,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_space_used(&mut self) -> Result<u64, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -191,6 +197,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn exists(&mut self, path: &str) -> Result<bool, Error> {
 		self.call_path_to_value("exists", path).await
 	}
@@ -202,6 +209,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn size(&mut self, path: &str) -> Result<u64, Error> {
 		self.call_path_to_value("size", path).await
 	}
@@ -211,6 +219,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_directory(&mut self, path: &str) -> Result<bool, Error> {
 		self.call_path_to_value("isDirectory", path).await
 	}
@@ -224,6 +233,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn last_modified(&mut self, path: &str) -> Result<u64, Error> {
 		self.call_path_to_value("lastModified", path).await
 	}
@@ -239,6 +249,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`FileNotFound`](Error::FileNotFound)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
 		let ret: Result<OneValue<Option<Vec<DirectoryEntry<'buffer>>>>, _> = component_method(
 			self.invoker,
@@ -251,6 +262,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(Some(listing))) => Ok(listing),
 			Ok(OneValue(None)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -260,6 +272,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the target directory already exists, or if a
 	///   directory on the path cannot be created (typically due to lack of space, an intermediate
 	///   path component being an existing file, or the filesystem being read-only).
@@ -277,6 +290,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the removal fails (typically due to the path not
 	///   existing or the filesystem being read-only).
 	pub async fn remove(&mut self, path: &str) -> Result<(), Error> {
@@ -293,6 +307,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if the rename fails (typically due to the source
 	///   path not existing, the destination path existing and being of a different type than the
 	///   source, the destination being a non-empty directory, or the filesystem being read-only).
@@ -308,6 +323,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		match ret {
 			Ok(OneValue(true)) => Ok(()),
 			Ok(OneValue(false)) => Err(Error::Failed),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(MethodCallError::Other(_)) => Err(Error::BadFilename),
 			Err(e) => Err(e.into()),
 		}
@@ -347,6 +363,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadFilename`](Error::BadFilename)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn call_path_to_value<T>(&mut self, method: &str, path: &str) -> Result<T, Error>
 	where
 		for<'a> T: Decode<'a>,
@@ -557,6 +574,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedReadHandle<'handle, 'invoker, 
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NegativeSeek`](Error::NegativeSeek)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn seek(&mut self, basis: Seek, offset: i64) -> Result<u64, Error> {
 		seek_impl(
 			self.invoker,
@@ -580,6 +598,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedReadHandle<'handle, 'invoker, 
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn read(self, length: usize) -> Result<Option<&'buffer [u8]>, Error> {
 		use minicbor::bytes::ByteSlice;
 		#[derive(Encode)]
@@ -673,6 +692,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedWriteHandle<'handle, 'invoker,
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NegativeSeek`](Error::NegativeSeek)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn seek(&mut self, basis: Seek, offset: i64) -> Result<u64, Error> {
 		seek_impl(
 			self.invoker,
@@ -691,6 +711,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedWriteHandle<'handle, 'invoker,
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`DataTooLarge`](Error::DataTooLarge) if the disk is out of space
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
 		use minicbor::bytes::ByteSlice;
 		#[derive(Encode)]
@@ -739,6 +760,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedWriteHandle<'handle, 'invoker,
 /// # Errors
 /// * [`BadComponent`](Error::BadComponent)
 /// * [`NegativeSeek`](Error::NegativeSeek)
+/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 async fn seek_impl<B: Buffer>(
 	invoker: &mut Invoker,
 	buffer: &mut B,

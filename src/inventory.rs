@@ -108,6 +108,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_inventory_size(&mut self, side: impl Side) -> Result<u32, Error> {
 		let side: u8 = side.into();
 		let ret: OneValue<_> = Self::map_errors(
@@ -131,6 +132,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_slot_stack_size(
 		&mut self,
 		side: impl Side,
@@ -159,6 +161,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_slot_max_stack_size(
 		&mut self,
 		side: impl Side,
@@ -191,6 +194,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn compare_stacks(
 		&mut self,
 		side: impl Side,
@@ -225,6 +229,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn are_stacks_equivalent(
 		&mut self,
 		side: impl Side,
@@ -257,6 +262,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
 	pub async fn get_stack_in_slot(
@@ -283,6 +289,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
 	pub async fn get_all_stacks(&mut self, side: impl Side) -> Result<Snapshot, Error> {
@@ -314,6 +321,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
 	pub async fn get_inventory_name(self, side: impl Side) -> Result<&'buffer str, Error> {
@@ -350,6 +358,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn transfer_item<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -388,6 +397,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn transfer_item_from_slot<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -424,6 +434,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn transfer_item_from_slot_to_slot<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -464,6 +475,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn transfer_fluid<SideType: Side>(
 		&mut self,
 		source: SideType,
@@ -495,6 +507,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_level(
 		&mut self,
 		side: impl Side,
@@ -522,6 +535,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_capacity(
 		&mut self,
 		side: impl Side,
@@ -549,6 +563,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
 	pub async fn get_fluid_in_tank(
@@ -578,6 +593,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported) if detailed item information is disabled in the
 	///   config file.
 	pub async fn get_fluids_in_tanks(self, side: impl Side) -> Result<Vec<Tank<'buffer>>, Error> {
@@ -606,6 +622,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_level_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method(
@@ -626,6 +643,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method::<(), _, _>(
@@ -648,6 +666,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_capacity_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method(
@@ -671,6 +690,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method::<(), _, _>(
@@ -696,6 +716,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_slot(
 		self,
@@ -722,6 +743,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
 	/// * [`BadItem`](Error::BadItem)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_selected_slot(self) -> Result<Option<Fluid<'buffer>>, Error> {
 		let ret: OneValue<_> = Self::map_errors(
@@ -744,6 +766,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_internal_tank(
 		self,
@@ -770,6 +793,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent) is returned for any unrecognized error.
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_selected_internal_tank(
 		self,
@@ -801,6 +825,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`Failed`](Error::Failed) is returned in some cases if the item is empty.
 	/// * [`InventoryFull`](Error::InventoryFull)
 	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn drain(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
 		self.drain_or_fill(amount, "drain").await
 	}
@@ -818,6 +843,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`Failed`](Error::Failed) is returned if the tank is empty, if the item contains a fluid
 	///   that cannot be mixed with the fluid in the tank, or in some cases if the item is full.
 	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn fill(&mut self, amount: NonZeroU32) -> Result<u32, Error> {
 		self.drain_or_fill(amount, "fill").await
 	}
@@ -835,6 +861,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_stack_in_internal_slot(
 		self,
@@ -860,6 +887,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_stack_in_selected_internal_slot(
 		self,
@@ -890,6 +918,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_equivalent_to(&mut self, slot: NonZeroU32) -> Result<bool, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method(
@@ -916,6 +945,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`InventoryFull`](Error::InventoryFull)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on face
 	///   `face` of the block on side `side`) or if there are no items in the currently selected
 	///   slot.
@@ -973,6 +1003,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Failed`](Error::Failed) is returned if there is no inventory on side `side` (or on face
 	///   `face` of the block on side `side`), or if `slot` is greater than the number of slots in
 	///   the external inventory.
@@ -1031,6 +1062,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NoInventory`](Error::NoInventory) is returned if the robot does not have an inventory
 	///   and therefore has no item to equip.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn equip(&mut self) -> Result<(), Error> {
 		let ret: OneValue<bool> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "equip", None)
@@ -1054,6 +1086,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   the fluid being moved.
 	/// * [`InventoryFull`](Error::InventoryFull)
 	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn drain_or_fill(&mut self, amount: NonZeroU32, method: &str) -> Result<u32, Error> {
 		let ret: TwoValues<bool, u32> = Self::map_errors(
 			component_method(
@@ -1078,6 +1111,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem)
 	/// * [`Failed`](Error::Failed)
 	/// * [`NoInventory`](Error::NoInventory)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	fn map_errors<T>(x: Result<NullAndStringOr<'_, T>, MethodCallError<'_>>) -> Result<T, Error> {
 		const INCOMPATIBLE_FLUID: &str = "incompatible fluid";
@@ -1142,6 +1176,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 					)),
 				}
 			}
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}
@@ -1200,6 +1235,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadInventorySlot`](Error::BadInventorySlot) is returned if iteration has reached the
 	///   end of the slots.
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn next(self) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: Vec<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value::<(), _, _, _>(
 			self.invoker,
@@ -1231,6 +1267,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(self, slot: NonZeroU32) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let ret: OneValue<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value_indexed_read(
 			self.invoker,
@@ -1246,6 +1283,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn reset(&mut self) -> Result<(), Error> {
 		value_method::<(), Ignore, _, _>(
 			self.invoker,
@@ -1265,6 +1303,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn count(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> =
 			value_method::<(), _, _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
@@ -1282,6 +1321,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_all(self) -> Result<Vec<Option<ItemStack<'buffer>>>, Error> {
 		#[derive(Decode)]
 		struct Return<'buffer> {

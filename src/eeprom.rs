@@ -77,6 +77,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "get", None)
@@ -93,6 +94,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`DataTooLarge`](Error::DataTooLarge)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	/// * [`StorageReadOnly`](Error::StorageReadOnly)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set(&mut self, data: &[u8]) -> Result<(), Error> {
 		let data: &ByteSlice = data.into();
 		Self::map_errors::<Ignore>(
@@ -118,6 +120,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_label(self) -> Result<&'buffer str, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -140,6 +143,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`StorageReadOnly`](Error::StorageReadOnly)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_label(self, label: &str) -> Result<&'buffer str, Error> {
 		let ret: OneValue<_> = Self::map_errors(
 			component_method(
@@ -159,6 +163,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_size(&mut self) -> Result<usize, Error> {
 		let ret: OneValue<_> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getSize", None)
@@ -170,6 +175,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_checksum(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<&'_ str> = component_method::<(), _, _>(
 			self.invoker,
@@ -200,6 +206,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn make_read_only(&mut self, checksum: u32) -> Result<(), Error> {
 		Self::map_errors::<Ignore>(
 			component_method(
@@ -219,6 +226,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_data_size(&mut self) -> Result<usize, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -241,6 +249,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_data(self) -> Result<&'buffer [u8], Error> {
 		let ret: OneValue<&ByteSlice> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getData", None)
@@ -257,6 +266,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`DataTooLarge`](Error::DataTooLarge)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_data(&mut self, data: &[u8]) -> Result<(), Error> {
 		let data: &ByteSlice = data.into();
 		Self::map_errors::<Ignore>(
@@ -283,6 +293,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	/// * [`StorageReadOnly`](Error::StorageReadOnly)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	fn map_errors<T>(
 		x: Result<NullAndStringOr<'_, T>, MethodCallError<'_>>,
 		bad_parameters: Error,
@@ -296,6 +307,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
 			}
 			Err(MethodCallError::BadParameters(_)) => Err(bad_parameters),
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
 	}

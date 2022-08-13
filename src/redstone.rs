@@ -75,6 +75,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_input(&mut self) -> Result<[u8; BLOCK_SIDES], Error> {
 		self.get_vanilla("getInput").await
 	}
@@ -87,6 +88,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		self.get_side_vanilla("getInput", side.into()).await
 	}
@@ -100,6 +102,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_bundled_input(&mut self) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
 		self.get_bundled("getBundledInput").await
 	}
@@ -114,6 +117,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_bundled_input(
 		&mut self,
 		side: impl Side,
@@ -129,6 +133,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_colour_bundled_input(
 		&mut self,
 		side: impl Side,
@@ -146,6 +151,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_output(&mut self) -> Result<[u8; BLOCK_SIDES], Error> {
 		self.get_vanilla("getOutput").await
 	}
@@ -158,6 +164,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_output(&mut self, side: impl Side) -> Result<u8, Error> {
 		self.get_side_vanilla("getOutput", side.into()).await
 	}
@@ -171,6 +178,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_bundled_output(&mut self) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
 		self.get_bundled("getBundledOutput").await
 	}
@@ -185,6 +193,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -200,6 +209,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_side_colour_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -221,6 +231,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_output(
 		&mut self,
 		levels: &[Option<u8>; BLOCK_SIDES],
@@ -246,6 +257,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_side_output(&mut self, side: impl Side, level: u8) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let ret: OneValue<_> = component_method(
@@ -270,6 +282,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_bundled_output(
 		&mut self,
 		levels: &[[Option<u8>; COLOURS]; BLOCK_SIDES],
@@ -305,6 +318,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_side_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -332,6 +346,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_side_colour_bundled_output(
 		&mut self,
 		side: impl Side,
@@ -362,6 +377,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_comparator_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let ret: OneValue<_> = component_method(
@@ -383,6 +399,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_wake_threshold(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<_> = component_method::<(), _, _>(
 			self.invoker,
@@ -405,6 +422,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_wake_threshold(&mut self, threshold: u32) -> Result<u32, Error> {
 		let ret: OneValue<_> = component_method(
 			self.invoker,

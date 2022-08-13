@@ -78,6 +78,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn bind(&mut self, screen: Address, reset: bool) -> Result<(), Error> {
 		let ret: NullAndStringOr<'_, Ignore> = component_method(
 			self.invoker,
@@ -98,6 +99,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
 			self.invoker,
@@ -118,6 +120,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_background(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getBackground").await
 	}
@@ -128,6 +131,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_background(
 		&mut self,
 		colour: Colour,
@@ -140,6 +144,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_foreground(&mut self) -> Result<Colour, Error> {
 		self.get_colour("getForeground").await
 	}
@@ -150,6 +155,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_foreground(
 		&mut self,
 		colour: Colour,
@@ -163,6 +169,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_palette_colour(&mut self, index: PaletteIndex) -> Result<Rgb, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, _> = component_method(
 			self.invoker,
@@ -183,6 +190,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_palette_colour(
 		&mut self,
 		index: PaletteIndex,
@@ -207,6 +215,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
 			self.invoker,
@@ -225,6 +234,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
 		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
 			self.invoker,
@@ -244,6 +254,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadDepth`](Error::BadDepth)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_depth(&mut self, depth: u8) -> Result<(), Error> {
 		let ret: Result<NullAndStringOr<'_, Ignore>, _> = component_method(
 			self.invoker,
@@ -264,6 +275,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("maxResolution").await
 	}
@@ -273,6 +285,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_resolution(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getResolution").await
 	}
@@ -284,6 +297,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadCoordinate`](Error::BadCoordinate)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_resolution(&mut self, resolution: Dimension) -> Result<bool, Error> {
 		self.set_dimension("setResolution", resolution).await
 	}
@@ -293,6 +307,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_viewport(&mut self) -> Result<Dimension, Error> {
 		self.get_dimension("getViewport").await
 	}
@@ -303,6 +318,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadCoordinate`](Error::BadCoordinate)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_viewport(&mut self, resolution: Dimension) -> Result<bool, Error> {
 		self.set_dimension("setViewport", resolution).await
 	}
@@ -318,6 +334,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadCoordinate`](Error::BadCoordinate)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(&mut self, point: Point) -> Result<CharacterCellContents, Error> {
 		type Return<'character> = FiveValues<&'character str, u32, u32, Option<u32>, Option<u32>>;
 		let ret: Result<NullAndStringOr<'_, Return<'_>>, _> = component_method(
@@ -349,6 +366,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set(
 		&mut self,
 		position: Point,
@@ -396,6 +414,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn copy(
 		&mut self,
 		source: Point,
@@ -449,6 +468,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn fill(
 		&mut self,
 		target: Point,
@@ -508,6 +528,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 					_ => Err(Error::BadComponent(e.into())),
 				}
 			}
+			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => {
 				// Any other errors convert to BadComponent as usual.
 				Err(Error::BadComponent(e.into()))
@@ -520,6 +541,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a buffer which cannot fail.
 	async fn get_colour(&mut self, method: &str) -> Result<Colour, Error> {
 		let ret: NullAndStringOr<'_, TwoValues<u32, bool>> =
@@ -539,6 +561,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadPaletteIndex`](Error::BadPaletteIndex)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a buffer which cannot fail.
 	async fn set_colour(
 		&mut self,
@@ -567,6 +590,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn get_dimension(&mut self, method: &str) -> Result<Dimension, Error> {
 		let ret: NullAndStringOr<'_, Dimension> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
@@ -581,6 +605,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`BadCoordinate`](Error::BadCoordinate)
 	/// * [`BadScreen`](Error::BadScreen)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn set_dimension(&mut self, method: &str, parameter: Dimension) -> Result<bool, Error> {
 		let ret: Result<NullAndStringOr<'_, OneValue<_>>, _> = component_method(
 			self.invoker,
@@ -597,7 +622,8 @@ impl<'a, B: Buffer> Locked<'a, B> {
 
 	/// Given a “raw” `Result` whose
 	/// [`MethodCallError::BadParameters`](MethodCallError::BadParameters) needs to map to one
-	/// specific [`Error`](Error) value, with all others mapping to
+	/// specific [`Error`](Error) value, with all others except
+	/// [`MethodCallError::TooManyDescriptors`](MethodCallError::TooManyDescriptors) mapping to
 	/// [`Error::BadComponent`](Error::BadComponent), returns the “cooked” `Result` with the errors
 	/// mapped accordingly.
 	fn map_bad_parameters<T>(
@@ -606,6 +632,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	) -> Result<T, Error> {
 		x.map_err(|e| match e {
 			MethodCallError::BadParameters(_) => bad_parameters,
+			MethodCallError::TooManyDescriptors => Error::TooManyDescriptors,
 			e => Error::BadComponent(e.into()),
 		})
 	}
