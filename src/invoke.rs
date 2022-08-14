@@ -24,7 +24,7 @@ pub trait Buffer: AsMut<[u8]> + minicbor::encode::Write {
 	/// # Panics
 	/// This method should panic if the buffer is too small to hold the object and cannot be
 	/// resized, or if `x` fails to encode.
-	fn encode_into(&mut self, x: impl Encode) -> &[u8];
+	fn encode_into(&mut self, x: impl Encode<()>) -> &[u8];
 
 	/// Tries to end a component call invocation into the buffer.
 	///
@@ -38,7 +38,7 @@ pub trait Buffer: AsMut<[u8]> + minicbor::encode::Write {
 }
 
 impl Buffer for &mut [u8] {
-	fn encode_into(&mut self, x: impl Encode) -> &[u8] {
+	fn encode_into(&mut self, x: impl Encode<()>) -> &[u8] {
 		// The Write impl for &mut[u8] mutates the reference-to-slice itself to refer to a smaller
 		// slice. We don’t want to affect self, since we want to retain knowledge of the whole
 		// slice for subsequent uses as a buffer, so make a copy of the reference first and let
@@ -57,7 +57,7 @@ impl Buffer for &mut [u8] {
 
 #[cfg(feature = "alloc")]
 impl Buffer for alloc::vec::Vec<u8> {
-	fn encode_into(&mut self, x: impl Encode) -> &[u8] {
+	fn encode_into(&mut self, x: impl Encode<()>) -> &[u8] {
 		// The Write impl for Vec<u8> appends the bytes to the Vec, so we should clear it first and
 		// then return the whole Vec.
 		self.clear();
@@ -335,8 +335,8 @@ impl Callable for ValueMethodCallable<'_> {
 async fn call<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	Call: Callable,
 	B: Buffer,
 >(
@@ -389,8 +389,8 @@ async fn call<
 pub async fn component_method<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	B: Buffer,
 >(
 	invoker: &'invoker mut Invoker,
@@ -441,8 +441,8 @@ pub async fn component_method<
 pub async fn value<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	Descriptor: AsDescriptor,
 	B: Buffer,
 >(
@@ -493,8 +493,8 @@ pub async fn value<
 pub async fn value_indexed_read<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	Descriptor: AsDescriptor,
 	B: Buffer,
 >(
@@ -545,8 +545,8 @@ pub async fn value_indexed_read<
 pub async fn value_indexed_write<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	Descriptor: AsDescriptor,
 	B: Buffer,
 >(
@@ -598,8 +598,8 @@ pub async fn value_indexed_write<
 pub async fn value_method<
 	'invoker,
 	'buffer,
-	Params: Encode,
-	Return: Decode<'buffer>,
+	Params: Encode<()>,
+	Return: Decode<'buffer, ()>,
 	Descriptor: AsDescriptor,
 	B: Buffer,
 >(
