@@ -11,7 +11,6 @@ categories = ["games"]
 
 [dependencies.minicbor]
 default-features = false
-features = ["alloc"]
 version = "^0.15"
 
 [dependencies.oc-wasm-safe]
@@ -27,7 +26,7 @@ default = ["alloc", "proper-waker"]
 # Enable this if you want to use a Vec<u8> as your scratch buffer rather than
 # using a fixed-size slice or providing your own customer Buffer
 # implementation.
-alloc = []
+alloc = ["minicbor/alloc"]
 # Disable this if your executor passes a dummy waker (that doesn’t do anything)
 # and always polls every task to get a smaller sleep module.
 proper-waker = ["alloc"]
