@@ -33,9 +33,9 @@ pub struct ItemStack<'buffer> {
 	pub has_tag: bool,
 }
 
-impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, Error> {
-		match OptionItemStack::decode(d)?.into() {
+impl<'buffer, Context> Decode<'buffer, Context> for ItemStack<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>, context: &mut Context) -> Result<Self, Error> {
+		match OptionItemStack::decode(d, context)?.into() {
 			Some(s) => Ok(s),
 			None => Err(Error::message("missing item stack")),
 		}
@@ -54,9 +54,9 @@ impl<'buffer> Decode<'buffer> for ItemStack<'buffer> {
 #[repr(transparent)]
 pub struct OptionItemStack<'buffer>(pub Option<ItemStack<'buffer>>);
 
-impl<'buffer> Decode<'buffer> for OptionItemStack<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, Error> {
-		map_decoder::decode_nullable::<OptionItemStackBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for OptionItemStack<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>, context: &mut Context) -> Result<Self, Error> {
+		map_decoder::decode_nullable::<OptionItemStackBuilder<'buffer>, Context>(d, context)
 	}
 }
 
@@ -98,7 +98,12 @@ pub struct OptionItemStackBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for OptionItemStackBuilder<'buffer> {
 	type Output = OptionItemStack<'buffer>;
 
-	fn entry(&mut self, key: &str, d: &mut Decoder<'buffer>) -> Result<bool, Error> {
+	fn entry<Context>(
+		&mut self,
+		key: &str,
+		d: &mut Decoder<'buffer>,
+		_: &mut Context,
+	) -> Result<bool, Error> {
 		match key {
 			"name" => {
 				self.name = Some(d.str()?);

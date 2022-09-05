@@ -35,7 +35,12 @@ pub trait Builder<'buffer> {
 	///
 	/// # Errors
 	/// This fails if the value is not acceptable, for example if it is of the wrong data type.
-	fn entry(&mut self, key: &'buffer str, decoder: &mut Decoder<'buffer>) -> Result<bool, Error>;
+	fn entry<Context>(
+		&mut self,
+		key: &'buffer str,
+		decoder: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<bool, Error>;
 
 	/// Finishes building the object.
 	///
@@ -56,8 +61,9 @@ pub trait NullableBuilder<'buffer>: Builder<'buffer> {
 ///
 /// # Errors
 /// This fails if the underlying builder fails, or if the data item is not a definite-length map.
-pub fn decode<'buffer, B: Builder<'buffer> + Default>(
+pub fn decode<'buffer, B: Builder<'buffer> + Default, Context>(
 	d: &mut Decoder<'buffer>,
+	context: &mut Context,
 ) -> Result<B::Output, Error> {
 	let mut builder = B::default();
 	let len = d
@@ -65,7 +71,7 @@ pub fn decode<'buffer, B: Builder<'buffer> + Default>(
 		.ok_or_else(|| Error::message("indefinite-length maps are not supported"))?;
 	for _ in 0..len {
 		let key = d.str()?;
-		if builder.entry(key, d)? {
+		if builder.entry(key, d, context)? {
 			// The builder consumed the value.
 		} else {
 			// The builder did not consume the value. Skip it.
@@ -82,8 +88,9 @@ pub fn decode<'buffer, B: Builder<'buffer> + Default>(
 /// # Errors
 /// This fails if the underlying builder fails while processing map entries, or if the data item is
 /// neither a definite-length map, null, nor undefined.
-pub fn decode_nullable<'buffer, B: NullableBuilder<'buffer> + Default>(
+pub fn decode_nullable<'buffer, B: NullableBuilder<'buffer> + Default, Context>(
 	d: &mut Decoder<'buffer>,
+	context: &mut Context,
 ) -> Result<B::Output, Error> {
 	match d.datatype()? {
 		Type::Null => {
@@ -94,6 +101,6 @@ pub fn decode_nullable<'buffer, B: NullableBuilder<'buffer> + Default>(
 			d.undefined()?;
 			Ok(B::build_null())
 		}
-		_ => decode::<B>(d),
+		_ => decode::<B, Context>(d, context),
 	}
 }

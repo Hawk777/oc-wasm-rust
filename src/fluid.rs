@@ -25,9 +25,9 @@ pub struct Fluid<'buffer> {
 	pub has_tag: bool,
 }
 
-impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, Error> {
-		match OptionFluid::decode(d)?.into() {
+impl<'buffer, Context> Decode<'buffer, Context> for Fluid<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>, context: &mut Context) -> Result<Self, Error> {
+		match OptionFluid::decode(d, context)?.into() {
 			Some(f) => Ok(f),
 			None => Err(Error::message("missing fluid")),
 		}
@@ -47,9 +47,9 @@ impl<'buffer> Decode<'buffer> for Fluid<'buffer> {
 #[repr(transparent)]
 pub struct OptionFluid<'buffer>(pub Option<Fluid<'buffer>>);
 
-impl<'buffer> Decode<'buffer> for OptionFluid<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, Error> {
-		map_decoder::decode_nullable::<OptionFluidBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for OptionFluid<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>, context: &mut Context) -> Result<Self, Error> {
+		map_decoder::decode_nullable::<OptionFluidBuilder<'buffer>, Context>(d, context)
 	}
 }
 
@@ -82,7 +82,12 @@ pub struct OptionFluidBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for OptionFluidBuilder<'buffer> {
 	type Output = OptionFluid<'buffer>;
 
-	fn entry(&mut self, key: &str, d: &mut Decoder<'buffer>) -> Result<bool, Error> {
+	fn entry<Context>(
+		&mut self,
+		key: &str,
+		d: &mut Decoder<'buffer>,
+		_: &mut Context,
+	) -> Result<bool, Error> {
 		match key {
 			"name" => {
 				self.name = Some(d.str()?);
@@ -157,9 +162,9 @@ pub struct Tank<'buffer> {
 	pub capacity: u32,
 }
 
-impl<'buffer> Decode<'buffer> for Tank<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, Error> {
-		map_decoder::decode::<TankBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for Tank<'buffer> {
+	fn decode(d: &mut Decoder<'buffer>, context: &mut Context) -> Result<Self, Error> {
+		map_decoder::decode::<TankBuilder<'buffer>, Context>(d, context)
 	}
 }
 
@@ -176,13 +181,18 @@ pub struct TankBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for TankBuilder<'buffer> {
 	type Output = Tank<'buffer>;
 
-	fn entry(&mut self, key: &'buffer str, d: &mut Decoder<'buffer>) -> Result<bool, Error> {
+	fn entry<Context>(
+		&mut self,
+		key: &'buffer str,
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<bool, Error> {
 		match key {
 			"capacity" => {
 				self.capacity = Some(d.u32()?);
 				Ok(true)
 			}
-			_ => self.fluid.entry(key, d),
+			_ => self.fluid.entry(key, d, context),
 		}
 	}
 

@@ -115,10 +115,12 @@ pub trait Lockable<'invoker, 'buffer, B: oc_wasm_futures::invoke::Buffer> {
 #[cfg(feature = "alloc")]
 pub fn decode_one_based_map_as_vector<
 	'buffer,
-	DecodedType: Decode<'buffer>,
+	Context,
+	DecodedType: Decode<'buffer, Context>,
 	ResultType: From<DecodedType>,
 >(
 	d: &mut minicbor::Decoder<'buffer>,
+	context: &mut Context,
 ) -> Result<alloc::vec::Vec<ResultType>, minicbor::decode::Error> {
 	use alloc::vec;
 	use alloc::vec::Vec;
@@ -201,7 +203,7 @@ pub fn decode_one_based_map_as_vector<
 		if index == 0 || index > len {
 			return Err(minicbor::decode::Error::message("invalid map index"));
 		}
-		let value = d.decode::<DecodedType>()?;
+		let value = d.decode_with::<Context, DecodedType>(context)?;
 		if !data.set(index - 1, value.into()) {
 			return Err(minicbor::decode::Error::message("duplicate map key"));
 		}
