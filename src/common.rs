@@ -1,6 +1,8 @@
 use core::convert::TryFrom;
 use minicbor::{Decode, Encode};
 
+pub use oc_wasm_helpers::Lockable;
+
 /// An error returned when converting an invalid value to an enumeration.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TryFromIntError(pub(crate) ());
