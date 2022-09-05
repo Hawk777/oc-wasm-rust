@@ -692,10 +692,11 @@ pub enum TextDirection {
 	Vertical,
 }
 
-impl Encode for TextDirection {
+impl<Context> Encode<Context> for TextDirection {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		_: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		e.bool(*self == Self::Vertical)?;
 		Ok(())

@@ -1015,8 +1015,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		face: Option<RelativeSide>,
 	) -> Result<u32, Error> {
 		struct FalseOrU32(u32);
-		impl Decode<'_> for FalseOrU32 {
-			fn decode(d: &mut Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
+		impl<Context> Decode<'_, Context> for FalseOrU32 {
+			fn decode(
+				d: &mut Decoder<'_>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				if d.datatype()? == minicbor::data::Type::Bool {
 					if d.bool()? {
 						Err(minicbor::decode::Error::message(
@@ -1323,12 +1326,23 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_all(self) -> Result<Vec<Option<ItemStack<'buffer>>>, Error> {
+		fn do_decode_one_based_map_as_vector<'buffer, Context>(
+			d: &mut Decoder<'buffer>,
+			context: &mut Context,
+		) -> Result<Vec<Option<ItemStack<'buffer>>>, minicbor::decode::Error> {
+			// Turbofish can’t be used with #[cbor(decode_with)] due to unnamable Context type
+			// parameter.
+			oc_wasm_helpers::decode_one_based_map_as_vector::<
+				Context,
+				OptionItemStack<'_>,
+				Option<ItemStack<'_>>,
+			>(d, context)
+		}
+
 		#[derive(Decode)]
 		struct Return<'buffer> {
 			#[b(0)]
-			#[cbor(
-				decode_with = "oc_wasm_helpers::decode_one_based_map_as_vector::<OptionItemStack<'_>, Option<ItemStack<'_>>>"
-			)]
+			#[cbor(decode_with = "do_decode_one_based_map_as_vector")]
 			x: Vec<Option<ItemStack<'buffer>>>,
 		}
 

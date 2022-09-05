@@ -937,8 +937,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			Bool(bool),
 			U32(u32),
 		}
-		impl Decode<'_> for BoolOrU32 {
-			fn decode(d: &mut minicbor::Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
+		impl<Context> Decode<'_, Context> for BoolOrU32 {
+			fn decode(
+				d: &mut minicbor::Decoder<'_>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				if d.datatype()? == minicbor::data::Type::Bool {
 					Ok(Self::Bool(d.bool()?))
 				} else {

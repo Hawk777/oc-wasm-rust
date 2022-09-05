@@ -156,8 +156,11 @@ impl<'a> From<&'a minicbor::bytes::ByteVec> for PacketPart<'a> {
 	}
 }
 
-impl<'buffer> Decode<'buffer> for PacketPart<'buffer> {
-	fn decode(d: &mut minicbor::decode::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context> Decode<'buffer, Context> for PacketPart<'buffer> {
+	fn decode(
+		d: &mut minicbor::decode::Decoder<'buffer>,
+		_: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		use minicbor::data::Type;
 		match d.datatype()? {
 			Type::Bool => Ok(Self::Bool(d.bool()?)),
@@ -183,10 +186,11 @@ impl<'buffer> Decode<'buffer> for PacketPart<'buffer> {
 	}
 }
 
-impl Encode for PacketPart<'_> {
+impl<Context> Encode<Context> for PacketPart<'_> {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		_: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		match *self {
 			Self::Null => e.null(),
@@ -221,9 +225,12 @@ pub enum WakeMessage<'a> {
 	Fuzzy(&'a str),
 }
 
-impl<'buffer> Decode<'buffer> for WakeMessage<'buffer> {
-	fn decode(d: &mut minicbor::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		let inner = TwoValues::<Option<&'buffer str>, bool>::decode(d)?;
+impl<'buffer, Context> Decode<'buffer, Context> for WakeMessage<'buffer> {
+	fn decode(
+		d: &mut minicbor::Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		let inner = TwoValues::<Option<&'buffer str>, bool>::decode(d, context)?;
 		match inner {
 			TwoValues(None, _) => Ok(Self::Disabled),
 			TwoValues(Some(s), false) => Ok(Self::Exact(s)),
@@ -232,17 +239,18 @@ impl<'buffer> Decode<'buffer> for WakeMessage<'buffer> {
 	}
 }
 
-impl Encode for WakeMessage<'_> {
+impl<Context> Encode<Context> for WakeMessage<'_> {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		context: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		let inner: TwoValues<Option<&str>, bool> = match self {
 			Self::Disabled => TwoValues(None, false),
 			Self::Exact(s) => TwoValues(Some(s), false),
 			Self::Fuzzy(s) => TwoValues(Some(s), true),
 		};
-		inner.encode(e)
+		inner.encode(e, context)
 	}
 }
 
@@ -425,16 +433,17 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			port: NonZeroU16,
 			parts: &'parts [PacketPart<'parts>],
 		}
-		impl Encode for Params<'_> {
+		impl<Context> Encode<Context> for Params<'_> {
 			fn encode<W: minicbor::encode::Write>(
 				&self,
 				e: &mut minicbor::Encoder<W>,
+				context: &mut Context,
 			) -> Result<(), minicbor::encode::Error<W::Error>> {
 				e.array(2 + self.parts.len() as u64)?;
-				self.destination.encode(e)?;
-				self.port.encode(e)?;
+				self.destination.encode(e, context)?;
+				self.port.encode(e, context)?;
 				for part in self.parts {
-					part.encode(e)?;
+					part.encode(e, context)?;
 				}
 				Ok(())
 			}
@@ -467,15 +476,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			port: NonZeroU16,
 			parts: &'parts [PacketPart<'parts>],
 		}
-		impl Encode for Params<'_> {
+		impl<Context> Encode<Context> for Params<'_> {
 			fn encode<W: minicbor::encode::Write>(
 				&self,
 				e: &mut minicbor::Encoder<W>,
+				context: &mut Context,
 			) -> Result<(), minicbor::encode::Error<W::Error>> {
 				e.array(1 + self.parts.len() as u64)?;
-				self.port.encode(e)?;
+				self.port.encode(e, context)?;
 				for part in self.parts {
-					part.encode(e)?;
+					part.encode(e, context)?;
 				}
 				Ok(())
 			}
@@ -491,7 +501,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyParts`](Error::TooManyParts)
-	async fn do_send<P: Encode>(&mut self, method: &str, params: &P) -> Result<(), Error> {
+	async fn do_send<P: Encode<()>>(&mut self, method: &str, params: &P) -> Result<(), Error> {
 		let ret: Result<OneValue<bool>, MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
@@ -643,16 +653,19 @@ pub struct Message<'buffer, const N: usize> {
 	pub parts: [PacketPart<'buffer>; N],
 }
 
-impl<'buffer, const N: usize> Decode<'buffer> for Message<'buffer, N> {
-	fn decode(d: &mut minicbor::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context, const N: usize> Decode<'buffer, Context> for Message<'buffer, N> {
+	fn decode(
+		d: &mut minicbor::Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		// If the CBOR fits in RAM, the array length must be ≤ maximum usize.
 		#[allow(clippy::cast_possible_truncation)]
 		let len = d.array()?.unwrap() as usize;
 		if len >= 4 {
 			let parts_count = len - 4;
 			if parts_count <= N {
-				let receiver = Address::decode(d)?;
-				let sender = Address::decode(d)?;
+				let receiver = Address::decode(d, context)?;
+				let sender = Address::decode(d, context)?;
 				// The port number is always a u16; it is only delivered as an f64 because
 				// OpenComputers is like that.
 				#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -660,7 +673,7 @@ impl<'buffer, const N: usize> Decode<'buffer> for Message<'buffer, N> {
 				let distance = d.f64()?;
 				let mut parts = [PacketPart::Null; N];
 				for i in parts[..parts_count].iter_mut() {
-					*i = PacketPart::decode(d)?;
+					*i = PacketPart::decode(d, context)?;
 				}
 				Ok(Self {
 					receiver,

@@ -95,7 +95,10 @@ impl<'buffer> KeySignal<'buffer> {
 	///
 	/// This field is encoded as a double-precision floating point number in CBOR and needs to be
 	/// converted to its proper type.
-	fn decode_character(d: &mut Decoder<'buffer>) -> Result<Option<char>, minicbor::decode::Error> {
+	fn decode_character<Context>(
+		d: &mut Decoder<'buffer>,
+		_: &mut Context,
+	) -> Result<Option<char>, minicbor::decode::Error> {
 		// Unicode code points are 0≤N≤0x10FFFF.
 		#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 		let character = d.f64()? as u32;
@@ -110,8 +113,9 @@ impl<'buffer> KeySignal<'buffer> {
 	///
 	/// This field is encoded as a double-precision floating point number in CBOR and needs to be
 	/// converted to its proper type.
-	fn decode_keycode(
+	fn decode_keycode<Context>(
 		d: &mut Decoder<'buffer>,
+		_: &mut Context,
 	) -> Result<Option<NonZeroU32>, minicbor::decode::Error> {
 		// Keycodes are small nonnegative numbers.
 		#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

@@ -9,8 +9,8 @@ use minicbor::Decode;
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ignore();
 
-impl<'buffer> Decode<'buffer> for Ignore {
-	fn decode(_: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context> Decode<'buffer, Context> for Ignore {
+	fn decode(_: &mut Decoder<'buffer>, _: &mut Context) -> Result<Self, minicbor::decode::Error> {
 		Ok(Self())
 	}
 }

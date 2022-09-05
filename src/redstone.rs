@@ -510,10 +510,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 #[derive(Clone, Copy)]
 struct ArrayAsMap<T, const LENGTH: usize>(pub [T; LENGTH]);
 
-impl<'buffer, T: Copy + Decode<'buffer> + Default, const LENGTH: usize> Decode<'buffer>
-	for ArrayAsMap<T, LENGTH>
+impl<'buffer, Context, T: Copy + Decode<'buffer, Context> + Default, const LENGTH: usize>
+	Decode<'buffer, Context> for ArrayAsMap<T, LENGTH>
 {
-	fn decode(d: &mut minicbor::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+	fn decode(
+		d: &mut minicbor::Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		let mut ret = [T::default(); LENGTH];
 		// The CBOR fits in memory, so it must be <2³² elements.
 		#[allow(clippy::cast_possible_truncation)]
@@ -522,40 +525,44 @@ impl<'buffer, T: Copy + Decode<'buffer> + Default, const LENGTH: usize> Decode<'
 			.ok_or_else(|| minicbor::decode::Error::message(""))? as usize;
 		for _ in 0..length {
 			let key = d.u32()?;
-			ret[key as usize] = d.decode::<T>()?;
+			ret[key as usize] = d.decode_with(context)?;
 		}
 		Ok(Self(ret))
 	}
 }
 
-impl<T: Encode, const LENGTH: usize> Encode for ArrayAsMap<Option<T>, LENGTH> {
+impl<Context, T: Encode<Context>, const LENGTH: usize> Encode<Context>
+	for ArrayAsMap<Option<T>, LENGTH>
+{
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		context: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		let count = self.0.iter().filter(|i| i.is_some()).count();
 		e.map(count as u64)?;
 		for i in 0..LENGTH {
 			if let Some(elt) = &self.0[i] {
 				e.u64(i as u64)?;
-				e.encode(elt)?;
+				e.encode_with(elt, context)?;
 			}
 		}
 		Ok(())
 	}
 }
 
-impl<T: Encode, const INNER_LENGTH: usize, const OUTER_LENGTH: usize> Encode
-	for ArrayAsMap<ArrayAsMap<Option<T>, INNER_LENGTH>, OUTER_LENGTH>
+impl<Context, T: Encode<Context>, const INNER_LENGTH: usize, const OUTER_LENGTH: usize>
+	Encode<Context> for ArrayAsMap<ArrayAsMap<Option<T>, INNER_LENGTH>, OUTER_LENGTH>
 {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		context: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		e.map(OUTER_LENGTH as u64)?;
 		for i in 0..OUTER_LENGTH {
 			e.u64(i as u64)?;
-			e.encode(&self.0[i])?;
+			e.encode_with(&self.0[i], context)?;
 		}
 		Ok(())
 	}

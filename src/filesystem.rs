@@ -150,8 +150,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			Infinite,
 		}
 		use minicbor::{data::Type, Decoder};
-		impl Decode<'_> for Return {
-			fn decode(d: &mut Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
+		impl<Context> Decode<'_, Context> for Return {
+			fn decode(
+				d: &mut Decoder<'_>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				match d.datatype()? {
 					Type::F16 | Type::F32 | Type::F64 => {
 						d.skip()?;
@@ -366,7 +369,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn call_path_to_value<T>(&mut self, method: &str, path: &str) -> Result<T, Error>
 	where
-		for<'a> T: Decode<'a>,
+		for<'a> T: Decode<'a, ()>,
 	{
 		let ret: Result<OneValue<T>, _> = component_method(
 			self.invoker,
@@ -455,8 +458,11 @@ pub struct DirectoryEntry<'buffer> {
 	pub object_type: DirectoryEntryType,
 }
 
-impl<'buffer> Decode<'buffer> for DirectoryEntry<'buffer> {
-	fn decode(d: &mut minicbor::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context> Decode<'buffer, Context> for DirectoryEntry<'buffer> {
+	fn decode(
+		d: &mut minicbor::Decoder<'buffer>,
+		_: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		let name = d.str()?;
 		Ok(match name.strip_suffix('/') {
 			Some(name) => DirectoryEntry {
@@ -506,10 +512,11 @@ pub enum Seek {
 	End,
 }
 
-impl Encode for Seek {
+impl<Context> Encode<Context> for Seek {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
+		_: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		e.str(match self {
 			Self::Set => "set",
