@@ -1326,23 +1326,12 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_all(self) -> Result<Vec<Option<ItemStack<'buffer>>>, Error> {
-		fn do_decode_one_based_map_as_vector<'buffer, Context>(
-			d: &mut Decoder<'buffer>,
-			context: &mut Context,
-		) -> Result<Vec<Option<ItemStack<'buffer>>>, minicbor::decode::Error> {
-			// Turbofish can’t be used with #[cbor(decode_with)] due to unnamable Context type
-			// parameter.
-			oc_wasm_helpers::decode_one_based_map_as_vector::<
-				Context,
-				OptionItemStack<'_>,
-				Option<ItemStack<'_>>,
-			>(d, context)
-		}
-
 		#[derive(Decode)]
 		struct Return<'buffer> {
 			#[b(0)]
-			#[cbor(decode_with = "do_decode_one_based_map_as_vector")]
+			#[cbor(
+				decode_with = "oc_wasm_helpers::decode_one_based_map_as_vector::<Ctx, OptionItemStack<'_>, Option<ItemStack<'_>>>"
+			)]
 			x: Vec<Option<ItemStack<'buffer>>>,
 		}
 
