@@ -114,9 +114,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		struct Return<'buffer> {
 			inputs: [Tank<'buffer>; 2],
 		}
-		impl<'buffer> Decode<'buffer> for Return<'buffer> {
-			fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-				map_decoder::decode::<ReturnBuilder<'buffer>>(d)
+		impl<'buffer, Context> Decode<'buffer, Context> for Return<'buffer> {
+			fn decode(
+				d: &mut Decoder<'buffer>,
+				context: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
+				map_decoder::decode::<ReturnBuilder<'buffer>, _>(d, context)
 			}
 		}
 		#[derive(Default)]
@@ -127,16 +130,17 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		impl<'buffer> map_decoder::Builder<'buffer> for ReturnBuilder<'buffer> {
 			type Output = Return<'buffer>;
 
-			fn entry(
+			fn entry<Context>(
 				&mut self,
 				key: &str,
 				d: &mut Decoder<'buffer>,
+				context: &mut Context,
 			) -> Result<bool, minicbor::decode::Error> {
 				if key == "input1" {
-					self.input1 = Some(d.decode()?);
+					self.input1 = Some(d.decode_with(context)?);
 					Ok(true)
 				} else if key == "input2" {
-					self.input2 = Some(d.decode()?);
+					self.input2 = Some(d.decode_with(context)?);
 					Ok(true)
 				} else {
 					Ok(false)
@@ -329,9 +333,12 @@ pub struct Canisters<'buffer> {
 	pub output: Option<ItemStack<'buffer>>,
 }
 
-impl<'buffer> Decode<'buffer> for Canisters<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		map_decoder::decode::<CanistersBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for Canisters<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		map_decoder::decode::<CanistersBuilder<'buffer>, _>(d, context)
 	}
 }
 
@@ -348,19 +355,26 @@ pub struct CanistersBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for CanistersBuilder<'buffer> {
 	type Output = Canisters<'buffer>;
 
-	fn entry(
+	fn entry<Context>(
 		&mut self,
 		key: &str,
 		d: &mut Decoder<'buffer>,
+		context: &mut Context,
 	) -> Result<bool, minicbor::decode::Error> {
 		if key == "input1" {
-			self.inputs[0] = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.inputs[0] = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else if key == "input2" {
-			self.inputs[1] = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.inputs[1] = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else if key == "output" {
-			self.output = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.output = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else {
 			Ok(false)
@@ -388,9 +402,12 @@ pub struct Recipe<'buffer> {
 	pub output: Fluid<'buffer>,
 }
 
-impl<'buffer> Decode<'buffer> for Recipe<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		map_decoder::decode::<RecipeBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for Recipe<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		map_decoder::decode::<RecipeBuilder<'buffer>, _>(d, context)
 	}
 }
 
@@ -407,19 +424,20 @@ pub struct RecipeBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for RecipeBuilder<'buffer> {
 	type Output = Recipe<'buffer>;
 
-	fn entry(
+	fn entry<Context>(
 		&mut self,
 		key: &str,
 		d: &mut Decoder<'buffer>,
+		context: &mut Context,
 	) -> Result<bool, minicbor::decode::Error> {
 		if key == "input1" {
-			self.inputs[0] = Some(d.decode()?);
+			self.inputs[0] = Some(d.decode_with(context)?);
 			Ok(true)
 		} else if key == "input2" {
-			self.inputs[1] = Some(d.decode()?);
+			self.inputs[1] = Some(d.decode_with(context)?);
 			Ok(true)
 		} else if key == "output" {
-			self.output = Some(d.decode()?);
+			self.output = Some(d.decode_with(context)?);
 			Ok(true)
 		} else {
 			Ok(false)

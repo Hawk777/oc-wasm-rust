@@ -131,7 +131,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		struct Return<'buffer> {
 			#[b(0)]
 			#[cbor(
-				decode_with = "oc_wasm_helpers::decode_one_based_map_as_vector::<Job<'_>, Job<'_>>"
+				decode_with = "oc_wasm_helpers::decode_one_based_map_as_vector::<Ctx, Job<'_>, Job<'_>>"
 			)]
 			x: Vec<Job<'buffer>>,
 		}
@@ -198,9 +198,12 @@ pub struct Job<'buffer> {
 }
 
 #[cfg(feature = "alloc")]
-impl<'buffer> minicbor::Decode<'buffer> for Job<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		map_decoder::decode::<JobBuilder<'buffer>>(d)
+impl<'buffer, Context> minicbor::Decode<'buffer, Context> for Job<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		map_decoder::decode::<JobBuilder<'buffer>, _>(d, context)
 	}
 }
 
@@ -230,13 +233,14 @@ pub struct JobBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for JobBuilder<'buffer> {
 	type Output = Job<'buffer>;
 
-	fn entry(
+	fn entry<Context>(
 		&mut self,
 		key: &'buffer str,
 		d: &mut Decoder<'buffer>,
+		context: &mut Context,
 	) -> Result<bool, minicbor::decode::Error> {
 		if key == "input" {
-			let input: Vec<OptionItemStack<'buffer>> = d.decode().expect("input fail");
+			let input: Vec<OptionItemStack<'buffer>> = d.decode_with(context).expect("input fail");
 			self.input = input
 				.into_iter()
 				.next()
@@ -244,7 +248,7 @@ impl<'buffer> map_decoder::Builder<'buffer> for JobBuilder<'buffer> {
 			Ok(true)
 		} else if key == "output" {
 			self.output = d
-				.decode::<OptionItemStack<'buffer>>()
+				.decode_with::<_, OptionItemStack<'buffer>>(context)
 				.expect("output fail")
 				.into();
 			Ok(true)

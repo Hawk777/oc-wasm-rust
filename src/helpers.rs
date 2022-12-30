@@ -14,8 +14,8 @@ use oc_wasm_safe::{component::Invoker, Address};
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Ignore();
 
-impl<'buffer> Decode<'buffer> for Ignore {
-	fn decode(_: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context> Decode<'buffer, Context> for Ignore {
+	fn decode(_: &mut Decoder<'buffer>, _: &mut Context) -> Result<Self, minicbor::decode::Error> {
 		Ok(Self())
 	}
 }
@@ -34,8 +34,13 @@ pub enum NullAndStringOr<'buffer, T> {
 	Err(&'buffer str),
 }
 
-impl<'buffer, T: Decode<'buffer>> Decode<'buffer> for NullAndStringOr<'buffer, T> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context, T: Decode<'buffer, Context>> Decode<'buffer, Context>
+	for NullAndStringOr<'buffer, T>
+{
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		let mut p = d.probe();
 		let is_error = if let Some(length) = p.array()? {
 			if length == 2 {
@@ -51,7 +56,7 @@ impl<'buffer, T: Decode<'buffer>> Decode<'buffer> for NullAndStringOr<'buffer, T
 			d.skip()?;
 			Ok(Self::Err(d.str()?))
 		} else {
-			Ok(Self::Ok(T::decode(d)?))
+			Ok(Self::Ok(T::decode(d, context)?))
 		}
 	}
 }

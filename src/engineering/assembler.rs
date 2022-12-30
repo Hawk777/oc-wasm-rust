@@ -303,8 +303,11 @@ pub struct Recipe<'buffer> {
 	pub output: Option<ItemStack<'buffer>>,
 }
 
-impl<'buffer> Decode<'buffer> for Recipe<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+impl<'buffer, Context> Decode<'buffer, Context> for Recipe<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
 		let len = d.map()?.ok_or_else(|| {
 			minicbor::decode::Error::message("indefinite-length maps are not supported")
 		})?;
@@ -316,12 +319,12 @@ impl<'buffer> Decode<'buffer> for Recipe<'buffer> {
 				let index = key.as_bytes()[2];
 				if index.is_ascii_digit() && index != b'0' {
 					let index = (index - b'1') as usize;
-					inputs[index] = OptionItemStack::decode(d)?.into();
+					inputs[index] = OptionItemStack::decode(d, context)?.into();
 				} else {
 					d.skip()?;
 				}
 			} else if key == "out" {
-				output = OptionItemStack::decode(d)?.into();
+				output = OptionItemStack::decode(d, context)?.into();
 			} else {
 				d.skip()?;
 			}

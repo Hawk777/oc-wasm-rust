@@ -112,8 +112,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn vein_unlocalized_name(self) -> Result<Option<&'buffer str>, Error> {
 		struct Return<'buffer>(Result<Option<&'buffer str>, Error>);
-		impl<'buffer> Decode<'buffer> for Return<'buffer> {
-			fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+		impl<'buffer, Context> Decode<'buffer, Context> for Return<'buffer> {
+			fn decode(
+				d: &mut Decoder<'buffer>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				let len = d.array()?.ok_or_else(|| {
 					minicbor::decode::Error::message("indefinite-length arrays are not supported")
 				})?;
@@ -151,8 +154,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn vein_localized_name(self) -> Result<Option<&'buffer str>, Error> {
 		struct Return<'buffer>(Result<Option<&'buffer str>, Error>);
-		impl<'buffer> Decode<'buffer> for Return<'buffer> {
-			fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+		impl<'buffer, Context> Decode<'buffer, Context> for Return<'buffer> {
+			fn decode(
+				d: &mut Decoder<'buffer>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				let len = d.array()?.ok_or_else(|| {
 					minicbor::decode::Error::message("indefinite-length arrays are not supported")
 				})?;
@@ -197,8 +203,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
 	pub async fn vein_integrity(&mut self) -> Result<f32, Error> {
 		struct Return(Result<f32, Error>);
-		impl Decode<'_> for Return {
-			fn decode(d: &mut Decoder<'_>) -> Result<Self, minicbor::decode::Error> {
+		impl<Context> Decode<'_, Context> for Return {
+			fn decode(
+				d: &mut Decoder<'_>,
+				_: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				let len = d.array()?.ok_or_else(|| {
 					minicbor::decode::Error::message("indefinite-length arrays are not supported")
 				})?;

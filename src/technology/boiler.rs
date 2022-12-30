@@ -201,9 +201,12 @@ pub struct Canisters<'buffer> {
 	pub output: Option<ItemStack<'buffer>>,
 }
 
-impl<'buffer> Decode<'buffer> for Canisters<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		map_decoder::decode::<CanistersBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for Canisters<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		map_decoder::decode::<CanistersBuilder<'buffer>, _>(d, context)
 	}
 }
 
@@ -223,19 +226,26 @@ pub struct CanistersBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for CanistersBuilder<'buffer> {
 	type Output = Canisters<'buffer>;
 
-	fn entry(
+	fn entry<Context>(
 		&mut self,
 		key: &str,
 		d: &mut Decoder<'buffer>,
+		context: &mut Context,
 	) -> Result<bool, minicbor::decode::Error> {
 		if key == "fuel" {
-			self.fuel = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.fuel = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else if key == "input" {
-			self.input = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.input = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else if key == "output" {
-			self.output = d.decode::<OptionItemStack<'buffer>>()?.into();
+			self.output = d
+				.decode_with::<_, OptionItemStack<'buffer>>(context)?
+				.into();
 			Ok(true)
 		} else {
 			Ok(false)

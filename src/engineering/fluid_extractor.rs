@@ -90,8 +90,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			fluid: Option<Fluid<'buffer>>,
 			process_time: u32,
 		}
-		impl<'buffer> minicbor::Decode<'buffer> for Return<'buffer> {
-			fn decode(d: &mut minicbor::Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
+		impl<'buffer, Context> minicbor::Decode<'buffer, Context> for Return<'buffer> {
+			fn decode(
+				d: &mut minicbor::Decoder<'buffer>,
+				context: &mut Context,
+			) -> Result<Self, minicbor::decode::Error> {
 				let len = d.array()?.ok_or_else(|| {
 					minicbor::decode::Error::message("indefinite-length arrays are not supported")
 				})?;
@@ -104,9 +107,11 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 					})
 				} else if len == 4 {
 					Ok(Self {
-						input: Some(d.decode::<ItemStack<'buffer>>()?),
-						output: d.decode::<OptionItemStack<'buffer>>()?.into(),
-						fluid: d.decode::<OptionFluid<'buffer>>()?.into(),
+						input: Some(d.decode_with::<_, ItemStack<'buffer>>(context)?),
+						output: d
+							.decode_with::<_, OptionItemStack<'buffer>>(context)?
+							.into(),
+						fluid: d.decode_with::<_, OptionFluid<'buffer>>(context)?.into(),
 						process_time: d.u32()?,
 					})
 				} else {

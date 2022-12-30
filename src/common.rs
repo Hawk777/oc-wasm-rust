@@ -22,9 +22,12 @@ pub struct ItemStackWithProgress<'buffer> {
 	pub max_progress: u32,
 }
 
-impl<'buffer> Decode<'buffer> for ItemStackWithProgress<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		match d.decode::<OptionItemStackWithProgress<'buffer>>()? {
+impl<'buffer, Context> Decode<'buffer, Context> for ItemStackWithProgress<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		match d.decode_with::<_, OptionItemStackWithProgress<'buffer>>(context)? {
 			OptionItemStackWithProgress(Some(s)) => Ok(s),
 			OptionItemStackWithProgress(None) => {
 				Err(minicbor::decode::Error::message("missing input stack"))
@@ -44,9 +47,12 @@ impl<'buffer> Decode<'buffer> for ItemStackWithProgress<'buffer> {
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OptionItemStackWithProgress<'buffer>(pub Option<ItemStackWithProgress<'buffer>>);
 
-impl<'buffer> Decode<'buffer> for OptionItemStackWithProgress<'buffer> {
-	fn decode(d: &mut Decoder<'buffer>) -> Result<Self, minicbor::decode::Error> {
-		map_decoder::decode_nullable::<OptionItemStackWithProgressBuilder<'buffer>>(d)
+impl<'buffer, Context> Decode<'buffer, Context> for OptionItemStackWithProgress<'buffer> {
+	fn decode(
+		d: &mut Decoder<'buffer>,
+		context: &mut Context,
+	) -> Result<Self, minicbor::decode::Error> {
+		map_decoder::decode_nullable::<OptionItemStackWithProgressBuilder<'buffer>, _>(d, context)
 	}
 }
 
@@ -76,10 +82,11 @@ pub struct OptionItemStackWithProgressBuilder<'buffer> {
 impl<'buffer> map_decoder::Builder<'buffer> for OptionItemStackWithProgressBuilder<'buffer> {
 	type Output = OptionItemStackWithProgress<'buffer>;
 
-	fn entry(
+	fn entry<Context>(
 		&mut self,
 		key: &'buffer str,
 		d: &mut Decoder<'buffer>,
+		context: &mut Context,
 	) -> Result<bool, minicbor::decode::Error> {
 		match key {
 			"progress" => {
@@ -90,7 +97,7 @@ impl<'buffer> map_decoder::Builder<'buffer> for OptionItemStackWithProgressBuild
 				self.max_progress = d.u32()?;
 				Ok(true)
 			}
-			_ => self.item_stack.entry(key, d),
+			_ => self.item_stack.entry(key, d, context),
 		}
 	}
 
