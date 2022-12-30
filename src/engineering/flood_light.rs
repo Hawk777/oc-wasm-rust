@@ -71,7 +71,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -88,7 +88,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -112,7 +112,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the light is shining and was rotated very
 	///   recently.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_elevation(&mut self, direction: bool) -> Result<(), Error> {
 		self.turn("turnAroundXZ", direction).await
 	}
@@ -128,7 +128,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the light is shining and was rotated very
 	///   recently.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_azimuth(&mut self, direction: bool) -> Result<(), Error> {
 		self.turn("turnAroundY", direction).await
 	}
@@ -139,7 +139,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the light is shining and was rotated very
 	///   recently.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn turn(&mut self, method: &str, direction: bool) -> Result<(), Error> {
 		let ret = component_method(
 			self.invoker,
@@ -171,7 +171,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn can_turn(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<bool> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "canTurn", None)
@@ -183,7 +183,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_enabled(&mut self, enable: bool) -> Result<(), Error> {
 		component_method(
 			self.invoker,
@@ -200,7 +200,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<bool> = component_method::<(), _, _>(
 			self.invoker,

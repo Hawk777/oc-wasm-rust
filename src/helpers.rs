@@ -78,7 +78,7 @@ pub const fn max_usize(x: usize, y: usize) -> usize {
 ///
 /// # Errors
 /// * [`BadComponent`](Error::BadComponent)
-/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 pub async fn enable_computer_control(
 	address: &Address,
 	invoker: &mut Invoker,
@@ -103,7 +103,7 @@ pub async fn enable_computer_control(
 ///
 /// # Errors
 /// * [`BadComponent`](Error::BadComponent)
-/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 pub async fn set_enabled(
 	address: &Address,
 	invoker: &mut Invoker,

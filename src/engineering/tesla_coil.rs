@@ -95,7 +95,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -112,7 +112,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -129,7 +129,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<bool> = component_method::<(), _, _>(
 			self.invoker,
@@ -146,7 +146,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_redstone_polarity(&mut self, level: SignalLevel) -> Result<(), Error> {
 		component_method(
 			self.invoker,
@@ -164,7 +164,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the Tesla coil is energized.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_power(&mut self, level: PowerLevel) -> Result<(), Error> {
 		let ret: Result<(), MethodCallError<'_>> = component_method(
 			self.invoker,

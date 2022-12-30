@@ -70,7 +70,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn power(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,

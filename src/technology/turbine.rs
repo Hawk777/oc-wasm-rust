@@ -98,7 +98,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn speed(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -115,7 +115,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn input_tank(self) -> Result<Tank<'buffer>, Error> {
 		let method = match self.kind {
 			Kind::Gas => "getInputTankInfo",
@@ -128,7 +128,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn output_tank(self) -> Result<Tank<'buffer>, Error> {
 		self.tank("getOutputTankInfo").await
 	}
@@ -137,7 +137,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn tank(self, method: &str) -> Result<Tank<'buffer>, Error> {
 		let ret: OneValue<Tank<'buffer>> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
@@ -153,7 +153,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn enable_computer_control(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::enable_computer_control(&self.address, self.invoker, self.buffer, enable)
 			.await
@@ -167,7 +167,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotComputerControlled`](Error::NotComputerControlled)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_enabled(&mut self, enable: bool) -> Result<(), Error> {
 		crate::helpers::set_enabled(&self.address, self.invoker, self.buffer, enable).await
 	}

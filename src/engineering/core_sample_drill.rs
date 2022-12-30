@@ -71,7 +71,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn progress(&mut self) -> Result<f32, Error> {
 		let ret: OneValue<f32> = component_method::<(), _, _>(
 			self.invoker,
@@ -88,7 +88,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_finished(&mut self) -> Result<bool, Error> {
 		let ret: OneValue<bool> = component_method::<(), _, _>(
 			self.invoker,
@@ -109,7 +109,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the drilling process is not complete.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn vein_unlocalized_name(self) -> Result<Option<&'buffer str>, Error> {
 		struct Return<'buffer>(Result<Option<&'buffer str>, Error>);
 		impl<'buffer, Context> Decode<'buffer, Context> for Return<'buffer> {
@@ -151,7 +151,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the drilling process is not complete.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn vein_localized_name(self) -> Result<Option<&'buffer str>, Error> {
 		struct Return<'buffer>(Result<Option<&'buffer str>, Error>);
 		impl<'buffer, Context> Decode<'buffer, Context> for Return<'buffer> {
@@ -200,7 +200,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`NotReady`](Error::NotReady) is returned if the drilling process is not complete.
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn vein_integrity(&mut self) -> Result<f32, Error> {
 		struct Return(Result<f32, Error>);
 		impl<Context> Decode<'_, Context> for Return {
@@ -242,7 +242,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn vein_expected_yield(&mut self) -> Result<Option<u32>, Error> {
 		let ret: OneValue<i32> = component_method::<(), _, _>(
 			self.invoker,
@@ -259,7 +259,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -276,7 +276,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
 		let ret: OneValue<u32> = component_method::<(), _, _>(
 			self.invoker,
@@ -293,7 +293,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`TooManyDescriptors](Error::TooManyDescriptors)
+	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn reset(&mut self) -> Result<(), Error> {
 		component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "reset", None)
 			.await?;
