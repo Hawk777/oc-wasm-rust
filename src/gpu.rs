@@ -9,7 +9,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{error::NullAndStringOr, FiveValues, Lockable, OneValue, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
-	Address,
+	extref, Address,
 };
 
 /// The type name for GPU components.
@@ -381,10 +381,12 @@ impl<'a, B: Buffer> Locked<'a, B> {
 			#[n(1)]
 			y: u32,
 			#[n(2)]
-			value: &'a str,
+			value: extref::String<'a>,
 			#[n(3)]
 			direction: TextDirection,
 		}
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let text = unsafe { extref::String::new(text) };
 		let ret: NullAndStringOr<'_, Ignore> = component_method(
 			self.invoker,
 			self.buffer,

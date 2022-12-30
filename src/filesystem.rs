@@ -8,7 +8,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{Lockable, OneValue, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
-	descriptor, Address,
+	descriptor, extref, Address,
 };
 
 /// The type name for filesystem components.
@@ -103,6 +103,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`Unsupported`](Error::Unsupported) is returned if this filesystem does not support
 	///   labels.
 	pub async fn set_label(self, label: Option<&str>) -> Result<Option<&'buffer str>, Error> {
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let label = label.map(|l| unsafe { extref::String::new(l) });
 		let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
@@ -254,6 +256,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`FileNotFound`](Error::FileNotFound)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let path = unsafe { extref::String::new(path) };
 		let ret: Result<OneValue<Option<Vec<DirectoryEntry<'buffer>>>>, _> = component_method(
 			self.invoker,
 			self.buffer,
@@ -315,6 +319,9 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   path not existing, the destination path existing and being of a different type than the
 	///   source, the destination being a non-empty directory, or the filesystem being read-only).
 	pub async fn rename(&mut self, source: &str, destination: &str) -> Result<(), Error> {
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let source = unsafe { extref::String::new(source) };
+		let destination = unsafe { extref::String::new(destination) };
 		let ret: Result<OneValue<bool>, _> = component_method(
 			self.invoker,
 			self.buffer,
@@ -371,6 +378,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	where
 		for<'a> T: Decode<'a, ()>,
 	{
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let path = unsafe { extref::String::new(path) };
 		let ret: Result<OneValue<T>, _> = component_method(
 			self.invoker,
 			self.buffer,
@@ -398,6 +407,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		mode: &str,
 		file_not_found_error: Error,
 	) -> Result<descriptor::Owned, Error> {
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let path = unsafe { extref::String::new(path) };
 		let descriptor: Result<OneValue<descriptor::Decoded>, MethodCallError<'_>> =
 			component_method(
 				self.invoker,
@@ -720,19 +731,20 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedWriteHandle<'handle, 'invoker,
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-		use minicbor::bytes::ByteSlice;
 		#[derive(Encode)]
 		#[cbor(array)]
 		struct Params<'descriptor, 'bytes>(
 			#[n(0)] &'descriptor descriptor::Owned,
-			#[n(1)] &'bytes ByteSlice,
+			#[n(1)] extref::Bytes<'bytes>,
 		);
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let bytes = unsafe { extref::Bytes::new(bytes) };
 		let ret: Result<Ignore, MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.handle.address,
 			"write",
-			Some(&Params(&self.handle.descriptor, bytes.into())),
+			Some(&Params(&self.handle.descriptor, bytes)),
 		)
 		.await;
 		match ret {

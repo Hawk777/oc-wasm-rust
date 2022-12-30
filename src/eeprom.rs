@@ -7,7 +7,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{error::NullAndStringOr, Lockable, OneValue};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
-	Address,
+	extref, Address,
 };
 
 /// The type name for EEPROM components.
@@ -96,7 +96,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`StorageReadOnly`](Error::StorageReadOnly)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set(&mut self, data: &[u8]) -> Result<(), Error> {
-		let data: &ByteSlice = data.into();
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let data = unsafe { extref::Bytes::new(data) };
 		Self::map_errors::<Ignore>(
 			component_method(
 				self.invoker,
@@ -145,6 +146,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`StorageReadOnly`](Error::StorageReadOnly)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_label(self, label: &str) -> Result<&'buffer str, Error> {
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let label = unsafe { extref::String::new(label) };
 		let ret: OneValue<_> = Self::map_errors(
 			component_method(
 				self.invoker,
@@ -208,13 +211,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn make_read_only(&mut self, checksum: u32) -> Result<(), Error> {
+		let checksum = alloc::format!("{:08x}", checksum);
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let checksum = unsafe { extref::String::new(&checksum) };
 		Self::map_errors::<Ignore>(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"makeReadonly",
-				Some(&OneValue(&alloc::format!("{:08x}", checksum))),
+				Some(&OneValue(checksum)),
 			)
 			.await,
 			Error::BadComponent(oc_wasm_safe::error::Error::Unknown),
@@ -268,7 +274,8 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NotEnoughEnergy`](Error::NotEnoughEnergy)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_data(&mut self, data: &[u8]) -> Result<(), Error> {
-		let data: &ByteSlice = data.into();
+		// SAFETY: component_method() both encodes and submits the CBOR in one go.
+		let data = unsafe { extref::Bytes::new(data) };
 		Self::map_errors::<Ignore>(
 			component_method(
 				self.invoker,

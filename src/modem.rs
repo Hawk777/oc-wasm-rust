@@ -9,7 +9,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{Lockable, OneValue, TwoValues};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
-	Address,
+	extref, Address,
 };
 
 /// The type name for network cards.
@@ -190,15 +190,25 @@ impl<Context> Encode<Context> for PacketPart<'_> {
 	fn encode<W: minicbor::encode::Write>(
 		&self,
 		e: &mut minicbor::Encoder<W>,
-		_: &mut Context,
+		c: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
 		match *self {
 			Self::Null => e.null(),
 			Self::Bool(v) => e.bool(v),
 			Self::I32(v) => e.i32(v),
 			Self::F64(v) => e.f64(v),
-			Self::Str(v) => e.str(v),
-			Self::Bytes(v) => e.bytes(v),
+			// SAFETY: We are sweeping things under the carpet a bit. In theory a consumer could
+			// create a PacketPart, then CBOR-encode it themselves, then drop the PacketPart and
+			// the string or byte array to which it points, then submit the CBOR via
+			// oc_wasm_safe::component::Invoker (which takes the already-encoded CBOR). But the
+			// ergonomics of making something in PacketPart itself unsafe would be really bad.
+			// Unfortunately we do not have the ability to say “impl Encode but only allow it to be
+			// used within this module”, which would solve this problem (because nobody else could
+			// CBOR-encode the PacketPart). So it seems most useful to just do this, even though
+			// it’s not *technically* completely safe—it is safe when the PacketPart is passed to
+			// the send or broadcast methods in this module.
+			Self::Str(v) => e.encode_with(unsafe { extref::String::new(v) }, c),
+			Self::Bytes(v) => e.encode_with(unsafe { extref::Bytes::new(v) }, c),
 		}?;
 		Ok(())
 	}
@@ -245,10 +255,20 @@ impl<Context> Encode<Context> for WakeMessage<'_> {
 		e: &mut minicbor::Encoder<W>,
 		context: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
-		let inner: TwoValues<Option<&str>, bool> = match self {
+		let inner: TwoValues<Option<extref::String<'_>>, bool> = match self {
 			Self::Disabled => TwoValues(None, false),
-			Self::Exact(s) => TwoValues(Some(s), false),
-			Self::Fuzzy(s) => TwoValues(Some(s), true),
+			// SAFETY: We are sweeping things under the carpet a bit. In theory a consumer could
+			// create a WakeMessage, then CBOR-encode it themselves, then drop the WakeMessage and
+			// the string or byte array to which it points, then submit the CBOR via
+			// oc_wasm_safe::component::Invoker (which takes the already-encoded CBOR). But the
+			// ergonomics of making something in WakeMessage itself unsafe would be really bad.
+			// Unfortunately we do not have the ability to say “impl Encode but only allow it to be
+			// used within this module”, which would solve this problem (because nobody else could
+			// CBOR-encode the WakeMessage). So it seems most useful to just do this, even though
+			// it’s not *technically* completely safe—it is safe when the WakeMessage is passed to
+			// the set_wake_message method in this module.
+			Self::Exact(s) => TwoValues(Some(unsafe { extref::String::new(s) }), false),
+			Self::Fuzzy(s) => TwoValues(Some(unsafe { extref::String::new(s) }), true),
 		};
 		inner.encode(e, context)
 	}
