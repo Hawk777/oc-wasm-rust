@@ -6,7 +6,7 @@ use crate::helpers::Ignore;
 use core::fmt::{Debug, Formatter};
 use minicbor::Encode;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, FiveValues, Lockable, OneValue, TwoValues};
+use oc_wasm_helpers::{error::NullAndStringOr, Lockable};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	extref, Address,
@@ -85,7 +85,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 			self.buffer,
 			&self.address,
 			"bind",
-			Some(&TwoValues(screen, reset)),
+			Some(&(screen, reset)),
 		)
 		.await?;
 		match ret {
@@ -101,7 +101,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_screen(&mut self) -> Result<Option<Address>, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+		let ret: NullAndStringOr<'_, (Option<Address>,)> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -171,12 +171,12 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_palette_colour(&mut self, index: PaletteIndex) -> Result<Rgb, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, (u32,)>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getPaletteColor",
-			Some(&OneValue(index.0)),
+			Some(&(index.0,)),
 		)
 		.await;
 		let ret = Self::map_bad_parameters(ret, Error::BadPaletteIndex)?;
@@ -196,12 +196,12 @@ impl<'a, B: Buffer> Locked<'a, B> {
 		index: PaletteIndex,
 		colour: Rgb,
 	) -> Result<Rgb, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<u32>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, (u32,)>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setPaletteColor",
-			Some(&TwoValues(index.0, colour.0)),
+			Some(&(index.0, colour.0)),
 		)
 		.await;
 		let ret = Self::map_bad_parameters(ret, Error::BadPaletteIndex)?;
@@ -217,7 +217,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+		let ret: NullAndStringOr<'_, (u8,)> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -236,7 +236,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_depth(&mut self) -> Result<u8, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method::<(), _, _>(
+		let ret: NullAndStringOr<'_, (u8,)> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -261,7 +261,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 			self.buffer,
 			&self.address,
 			"setDepth",
-			Some(&OneValue(depth)),
+			Some(&(depth,)),
 		)
 		.await;
 		let ret = Self::map_bad_parameters(ret, Error::BadDepth)?;
@@ -336,13 +336,13 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(&mut self, point: Point) -> Result<CharacterCellContents, Error> {
-		type Return<'character> = FiveValues<&'character str, u32, u32, Option<u32>, Option<u32>>;
+		type Return<'character> = (&'character str, u32, u32, Option<u32>, Option<u32>);
 		let ret: Result<NullAndStringOr<'_, Return<'_>>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"get",
-			Some(&TwoValues(point.x, point.y)),
+			Some(&(point.x, point.y)),
 		)
 		.await;
 		let ret = Self::map_bad_parameters(ret, Error::BadCoordinate)?;
@@ -546,7 +546,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	#[allow(clippy::missing_panics_doc)] // Only encode() calls to a buffer which cannot fail.
 	async fn get_colour(&mut self, method: &str) -> Result<Colour, Error> {
-		let ret: NullAndStringOr<'_, TwoValues<u32, bool>> =
+		let ret: NullAndStringOr<'_, (u32, bool)> =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		let ret = Self::map_no_screen(ret)?;
@@ -570,11 +570,11 @@ impl<'a, B: Buffer> Locked<'a, B> {
 		colour: Colour,
 		method: &str,
 	) -> Result<(Rgb, Option<PaletteIndex>), Error> {
-		let params: TwoValues<u32, bool> = match colour {
-			Colour::Rgb(rgb) => TwoValues(rgb.0, false),
-			Colour::PaletteIndex(pi) => TwoValues(pi.0, true),
+		let params: (u32, bool) = match colour {
+			Colour::Rgb(rgb) => (rgb.0, false),
+			Colour::PaletteIndex(pi) => (pi.0, true),
 		};
-		let ret: Result<NullAndStringOr<'_, TwoValues<u32, Option<u32>>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, (u32, Option<u32>)>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -609,7 +609,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadScreen`](Error::BadScreen)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn set_dimension(&mut self, method: &str, parameter: Dimension) -> Result<bool, Error> {
-		let ret: Result<NullAndStringOr<'_, OneValue<_>>, _> = component_method(
+		let ret: Result<NullAndStringOr<'_, (bool,)>, _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,

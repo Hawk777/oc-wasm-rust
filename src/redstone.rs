@@ -5,7 +5,7 @@ use crate::error::Error;
 use crate::helpers::Ignore;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{Lockable, OneValue, ThreeValues, TwoValues};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for redstone components.
@@ -236,12 +236,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		&mut self,
 		levels: &[Option<u8>; BLOCK_SIDES],
 	) -> Result<[u8; BLOCK_SIDES], Error> {
-		let ret: OneValue<ArrayAsMap<u8, BLOCK_SIDES>> = component_method(
+		let ret: (ArrayAsMap<u8, BLOCK_SIDES>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setOutput",
-			Some(&OneValue(ArrayAsMap(*levels))),
+			Some(&(ArrayAsMap(*levels),)),
 		)
 		.await?;
 		Ok(ret.0 .0)
@@ -260,12 +260,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_side_output(&mut self, side: impl Side, level: u8) -> Result<u8, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = component_method(
+		let ret: (u8,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setOutput",
-			Some(&TwoValues(side, level)),
+			Some(&(side, level)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -287,15 +287,14 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		&mut self,
 		levels: &[[Option<u8>; COLOURS]; BLOCK_SIDES],
 	) -> Result<(), Error> {
-		let param: OneValue<ArrayAsMap<ArrayAsMap<Option<u8>, COLOURS>, BLOCK_SIDES>> =
-			OneValue(ArrayAsMap([
-				ArrayAsMap(levels[0]),
-				ArrayAsMap(levels[1]),
-				ArrayAsMap(levels[2]),
-				ArrayAsMap(levels[3]),
-				ArrayAsMap(levels[4]),
-				ArrayAsMap(levels[5]),
-			]));
+		let param: (ArrayAsMap<ArrayAsMap<Option<u8>, COLOURS>, BLOCK_SIDES>,) = (ArrayAsMap([
+			ArrayAsMap(levels[0]),
+			ArrayAsMap(levels[1]),
+			ArrayAsMap(levels[2]),
+			ArrayAsMap(levels[3]),
+			ArrayAsMap(levels[4]),
+			ArrayAsMap(levels[5]),
+		]),);
 		component_method::<_, Ignore, _>(
 			self.invoker,
 			self.buffer,
@@ -330,7 +329,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			self.buffer,
 			&self.address,
 			"setBundledOutput",
-			Some(&TwoValues(side, ArrayAsMap(*levels))),
+			Some(&(side, ArrayAsMap(*levels))),
 		)
 		.await?;
 		Ok(())
@@ -355,12 +354,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<u8, Error> {
 		let side: u8 = side.into();
 		let colour: u8 = colour.into();
-		let ret: OneValue<_> = component_method(
+		let ret: (u8,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setBundledOutput",
-			Some(&ThreeValues(side, colour, level)),
+			Some(&(side, colour, level)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -380,12 +379,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_comparator_input(&mut self, side: impl Side) -> Result<u8, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = component_method(
+		let ret: (u8,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getComparatorInput",
-			Some(&OneValue(side)),
+			Some(&(side,)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -401,7 +400,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_wake_threshold(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -424,38 +423,38 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_wake_threshold(&mut self, threshold: u32) -> Result<u32, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (u32,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setWakeThreshold",
-			Some(&OneValue(threshold)),
+			Some(&(threshold,)),
 		)
 		.await?;
 		Ok(ret.0)
 	}
 
 	async fn get_vanilla(&mut self, method: &str) -> Result<[u8; BLOCK_SIDES], Error> {
-		let ret: OneValue<ArrayAsMap<u8, BLOCK_SIDES>> =
+		let ret: (ArrayAsMap<u8, BLOCK_SIDES>,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok(ret.0 .0)
 	}
 
 	async fn get_side_vanilla(&mut self, method: &str, side: u8) -> Result<u8, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (u8,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			method,
-			Some(&OneValue(side)),
+			Some(&(side,)),
 		)
 		.await?;
 		Ok(ret.0)
 	}
 
 	async fn get_bundled(&mut self, method: &str) -> Result<[[u8; COLOURS]; BLOCK_SIDES], Error> {
-		let ret: OneValue<ArrayAsMap<ArrayAsMap<u8, COLOURS>, BLOCK_SIDES>> =
+		let ret: (ArrayAsMap<ArrayAsMap<u8, COLOURS>, BLOCK_SIDES>,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok([
@@ -469,12 +468,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	}
 
 	async fn get_side_bundled(&mut self, method: &str, side: u8) -> Result<[u8; COLOURS], Error> {
-		let ret: OneValue<ArrayAsMap<u8, COLOURS>> = component_method(
+		let ret: (ArrayAsMap<u8, COLOURS>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			method,
-			Some(&OneValue(side)),
+			Some(&(side,)),
 		)
 		.await?;
 		Ok(ret.0 .0)
@@ -486,12 +485,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		side: u8,
 		colour: u8,
 	) -> Result<u8, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (u8,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			method,
-			Some(&TwoValues(side, colour)),
+			Some(&(side, colour)),
 		)
 		.await?;
 		Ok(ret.0)

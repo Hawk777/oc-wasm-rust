@@ -16,7 +16,7 @@ use oc_wasm_helpers::{
 	error::NullAndStringOr,
 	fluid::{Fluid, Tank},
 	inventory::{ItemStack, OptionItemStack},
-	FiveValues, FourValues, Lockable, OneValue, ThreeValues, TwoValues,
+	Lockable,
 };
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
@@ -111,13 +111,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_inventory_size(&mut self, side: impl Side) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getInventorySize",
-				Some(&OneValue(side)),
+				Some(&(side,)),
 			)
 			.await,
 		)?;
@@ -139,13 +139,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		slot: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getSlotStackSize",
-				Some(&TwoValues(side, slot)),
+				Some(&(side, slot)),
 			)
 			.await,
 		)?;
@@ -168,13 +168,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		slot: NonZeroU32,
 	) -> Result<Option<NonZeroU32>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getSlotMaxStackSize",
-				Some(&TwoValues(side, slot)),
+				Some(&(side, slot)),
 			)
 			.await,
 		)?;
@@ -203,13 +203,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		check_nbt: bool,
 	) -> Result<bool, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (bool,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"compareStacks",
-				Some(&FourValues(side, slot_a, slot_b, check_nbt)),
+				Some(&(side, slot_a, slot_b, check_nbt)),
 			)
 			.await,
 		)?;
@@ -237,13 +237,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		slot_b: NonZeroU32,
 	) -> Result<bool, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (bool,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"areStacksEquivalent",
-				Some(&ThreeValues(side, slot_a, slot_b)),
+				Some(&(side, slot_a, slot_b)),
 			)
 			.await,
 		)?;
@@ -271,13 +271,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		slot: NonZeroU32,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<ItemStack<'buffer>>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getStackInSlot",
-				Some(&TwoValues(side, slot)),
+				Some(&(side, slot)),
 			)
 			.await,
 		)?;
@@ -294,13 +294,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   config file.
 	pub async fn get_all_stacks(&mut self, side: impl Side) -> Result<Snapshot, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<descriptor::Decoded> = Self::map_errors(
+		let ret: (descriptor::Decoded,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getAllStacks",
-				Some(&OneValue(side)),
+				Some(&(side,)),
 			)
 			.await,
 		)?;
@@ -326,13 +326,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   config file.
 	pub async fn get_inventory_name(self, side: impl Side) -> Result<&'buffer str, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (&'buffer str,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getInventoryName",
-				Some(&OneValue(side)),
+				Some(&(side,)),
 			)
 			.await,
 		)?;
@@ -367,13 +367,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferItem",
-				Some(&ThreeValues(source, sink, count)),
+				Some(&(source, sink, count)),
 			)
 			.await,
 		)?;
@@ -407,13 +407,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferItem",
-				Some(&FourValues(source, sink, count, source_slot.get())),
+				Some(&(source, sink, count, source_slot.get())),
 			)
 			.await,
 		)?;
@@ -445,19 +445,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferItem",
-				Some(&FiveValues(
-					source,
-					sink,
-					count,
-					source_slot.get(),
-					sink_slot.get(),
-				)),
+				Some(&(source, sink, count, source_slot.get(), sink_slot.get())),
 			)
 			.await,
 		)?;
@@ -484,13 +478,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<u32, Error> {
 		let source: u8 = source.into();
 		let sink: u8 = sink.into();
-		let ret: TwoValues<bool, u32> = Self::map_errors(
+		let ret: (bool, u32) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"transferFluid",
-				Some(&ThreeValues(source, sink, count)),
+				Some(&(source, sink, count)),
 			)
 			.await,
 		)?;
@@ -514,13 +508,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankLevel",
-				Some(&TwoValues(side, tank.get())),
+				Some(&(side, tank.get())),
 			)
 			.await,
 		)?;
@@ -542,13 +536,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		tank: NonZeroU32,
 	) -> Result<u32, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankCapacity",
-				Some(&TwoValues(side, tank.get())),
+				Some(&(side, tank.get())),
 			)
 			.await,
 		)?;
@@ -572,13 +566,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		tank: NonZeroU32,
 	) -> Result<Tank<'buffer>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<Tank<'buffer>> = Self::map_errors(
+		let ret: (Tank<'buffer>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getFluidInTank",
-				Some(&TwoValues(side, tank.get())),
+				Some(&(side, tank.get())),
 			)
 			.await,
 		)?;
@@ -598,13 +592,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   config file.
 	pub async fn get_fluids_in_tanks(self, side: impl Side) -> Result<Vec<Tank<'buffer>>, Error> {
 		let side: u8 = side.into();
-		let ret: OneValue<Vec<Tank<'buffer>>> = Self::map_errors(
+		let ret: (Vec<Tank<'buffer>>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getFluidInTank",
-				Some(&OneValue(side)),
+				Some(&(side,)),
 			)
 			.await,
 		)?;
@@ -624,13 +618,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_level_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankLevelInSlot",
-				Some(&OneValue(slot.get())),
+				Some(&(slot.get(),)),
 			)
 			.await,
 		)?;
@@ -645,7 +639,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_level_in_selected_slot(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
@@ -668,13 +662,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_capacity_in_slot(&mut self, slot: NonZeroU32) -> Result<u32, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getTankCapacityInSlot",
-				Some(&OneValue(slot.get())),
+				Some(&(slot.get(),)),
 			)
 			.await,
 		)?;
@@ -692,7 +686,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadItem`](Error::BadItem)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_tank_capacity_in_selected_slot(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (u32,) = Self::map_errors(
 			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
@@ -722,13 +716,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		slot: NonZeroU32,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<Fluid<'buffer>>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getFluidInTankInSlot",
-				Some(&OneValue(slot.get())),
+				Some(&(slot.get(),)),
 			)
 			.await,
 		)?;
@@ -746,7 +740,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`Unsupported`](Error::Unsupported)
 	pub async fn get_fluid_in_tank_in_selected_slot(self) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<Fluid<'buffer>>,) = Self::map_errors(
 			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
@@ -772,13 +766,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		tank: NonZeroU32,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<Fluid<'buffer>>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getFluidInInternalTank",
-				Some(&OneValue(tank.get())),
+				Some(&(tank.get(),)),
 			)
 			.await,
 		)?;
@@ -798,7 +792,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	pub async fn get_fluid_in_selected_internal_tank(
 		self,
 	) -> Result<Option<Fluid<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<Fluid<'buffer>>,) = Self::map_errors(
 			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
@@ -867,13 +861,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		slot: NonZeroU32,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<ItemStack<'buffer>>,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"getStackInInternalSlot",
-				Some(&OneValue(slot)),
+				Some(&(slot,)),
 			)
 			.await,
 		)?;
@@ -892,7 +886,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	pub async fn get_stack_in_selected_internal_slot(
 		self,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (Option<ItemStack<'buffer>>,) = Self::map_errors(
 			component_method::<(), _, _>(
 				self.invoker,
 				self.buffer,
@@ -920,13 +914,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadInventorySlot`](Error::BadInventorySlot)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_equivalent_to(&mut self, slot: NonZeroU32) -> Result<bool, Error> {
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (bool,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"isEquivalentTo",
-				Some(&OneValue(slot.get())),
+				Some(&(slot.get(),)),
 			)
 			.await,
 		)?;
@@ -958,13 +952,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<(), Error> {
 		let side = u8::from(side);
 		let slot = slot.get();
-		let ret: TwoValues<bool, Option<&str>> = Self::map_errors(if let Some(f) = face {
+		let ret: (bool, Option<&str>) = Self::map_errors(if let Some(f) = face {
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"dropIntoSlot",
-				Some(&FourValues(side, slot, count, u8::from(f))),
+				Some(&(side, slot, count, u8::from(f))),
 			)
 			.await
 		} else {
@@ -973,14 +967,14 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				self.buffer,
 				&self.address,
 				"dropIntoSlot",
-				Some(&ThreeValues(side, slot, count)),
+				Some(&(side, slot, count)),
 			)
 			.await
 		})?;
 		match ret {
-			TwoValues(true, _) => Ok(()),
-			TwoValues(false, Some("inventory full/invalid slot")) => Err(Error::InventoryFull),
-			TwoValues(false, _) => Err(Error::Failed),
+			(true, _) => Ok(()),
+			(false, Some("inventory full/invalid slot")) => Err(Error::InventoryFull),
+			(false, _) => Err(Error::Failed),
 		}
 	}
 
@@ -1035,13 +1029,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		}
 		let side = u8::from(side);
 		let slot = slot.get();
-		let ret: OneValue<FalseOrU32> = Self::map_errors(if let Some(f) = face {
+		let ret: (FalseOrU32,) = Self::map_errors(if let Some(f) = face {
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"suckFromSlot",
-				Some(&FourValues(side, slot, count, u8::from(f))),
+				Some(&(side, slot, count, u8::from(f))),
 			)
 			.await
 		} else {
@@ -1050,7 +1044,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				self.buffer,
 				&self.address,
 				"suckFromSlot",
-				Some(&ThreeValues(side, slot, count)),
+				Some(&(side, slot, count)),
 			)
 			.await
 		})?;
@@ -1067,7 +1061,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   and therefore has no item to equip.
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn equip(&mut self) -> Result<(), Error> {
-		let ret: OneValue<bool> =
+		let ret: (bool,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "equip", None)
 				.await?;
 		if ret.0 {
@@ -1091,13 +1085,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`NoInventory`](Error::NoInventory) is returned if there is no tank.
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn drain_or_fill(&mut self, amount: NonZeroU32, method: &str) -> Result<u32, Error> {
-		let ret: TwoValues<bool, u32> = Self::map_errors(
+		let ret: (bool, u32) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				method,
-				Some(&OneValue(amount.get())),
+				Some(&(amount.get(),)),
 			)
 			.await,
 		)?;
@@ -1272,11 +1266,11 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(self, slot: NonZeroU32) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = oc_wasm_futures::invoke::value_indexed_read(
+		let ret: (OptionItemStack<'buffer>,) = oc_wasm_futures::invoke::value_indexed_read(
 			self.invoker,
 			self.buffer,
 			&self.descriptor,
-			Some(&OneValue(slot)),
+			Some(&(slot,)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -1308,7 +1302,7 @@ impl<'snapshot, 'invoker, 'buffer, B: Buffer> LockedSnapshot<'snapshot, 'invoker
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn count(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<_> =
+		let ret: (u32,) =
 			value_method::<(), _, _, _>(self.invoker, self.buffer, &self.descriptor, "count", None)
 				.await?;
 		Ok(ret.0)

@@ -5,7 +5,7 @@ use crate::helpers::{max_usize, Ignore};
 use alloc::vec::Vec;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{Lockable, OneValue, TwoValues};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	descriptor, extref, Address,
@@ -79,7 +79,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_label(self) -> Result<Option<&'buffer str>, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (Option<&'buffer str>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -105,16 +105,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	pub async fn set_label(self, label: Option<&str>) -> Result<Option<&'buffer str>, Error> {
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let label = label.map(|l| unsafe { extref::String::new(l) });
-		let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
+		let ret: Result<(Option<&'buffer str>,), MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setLabel",
-			Some(&OneValue(label)),
+			Some(&(label,)),
 		)
 		.await;
 		match ret {
-			Ok(OneValue(label)) => Ok(label),
+			Ok((label,)) => Ok(label),
 			Err(MethodCallError::BadParameters(_)) => Err(Error::StorageReadOnly),
 			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(MethodCallError::Other(_)) => Err(Error::Unsupported),
@@ -128,7 +128,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_read_only(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -166,7 +166,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				}
 			}
 		}
-		let ret: OneValue<Return> = component_method::<(), _, _>(
+		let ret: (Return,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -186,7 +186,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_space_used(&mut self) -> Result<u64, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (u64,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -258,17 +258,17 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	pub async fn list(self, path: &str) -> Result<Vec<DirectoryEntry<'buffer>>, Error> {
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let path = unsafe { extref::String::new(path) };
-		let ret: Result<OneValue<Option<Vec<DirectoryEntry<'buffer>>>>, _> = component_method(
+		let ret: Result<(Option<Vec<DirectoryEntry<'buffer>>>,), _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"list",
-			Some(&OneValue(path)),
+			Some(&(path,)),
 		)
 		.await;
 		match ret {
-			Ok(OneValue(Some(listing))) => Ok(listing),
-			Ok(OneValue(None)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
+			Ok((Some(listing),)) => Ok(listing),
+			Ok((None,)) | Err(MethodCallError::Other(_)) => Err(Error::FileNotFound),
 			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(e) => Err(Error::BadComponent(e.into())),
 		}
@@ -322,17 +322,17 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let source = unsafe { extref::String::new(source) };
 		let destination = unsafe { extref::String::new(destination) };
-		let ret: Result<OneValue<bool>, _> = component_method(
+		let ret: Result<(bool,), _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"rename",
-			Some(&TwoValues(source, destination)),
+			Some(&(source, destination)),
 		)
 		.await;
 		match ret {
-			Ok(OneValue(true)) => Ok(()),
-			Ok(OneValue(false)) => Err(Error::Failed),
+			Ok((true,)) => Ok(()),
+			Ok((false,)) => Err(Error::Failed),
 			Err(MethodCallError::TooManyDescriptors) => Err(Error::TooManyDescriptors),
 			Err(MethodCallError::Other(_)) => Err(Error::BadFilename),
 			Err(e) => Err(e.into()),
@@ -380,16 +380,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	{
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let path = unsafe { extref::String::new(path) };
-		let ret: Result<OneValue<T>, _> = component_method(
+		let ret: Result<(T,), _> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			method,
-			Some(&OneValue(path)),
+			Some(&(path,)),
 		)
 		.await;
 		match ret {
-			Ok(OneValue(v)) => Ok(v),
+			Ok((v,)) => Ok(v),
 			Err(MethodCallError::Other(_)) => Err(Error::BadFilename),
 			Err(e) => Err(e.into()),
 		}
@@ -409,17 +409,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	) -> Result<descriptor::Owned, Error> {
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let path = unsafe { extref::String::new(path) };
-		let descriptor: Result<OneValue<descriptor::Decoded>, MethodCallError<'_>> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				"open",
-				Some(&TwoValues(path, mode)),
-			)
-			.await;
+		let descriptor: Result<(descriptor::Decoded,), MethodCallError<'_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"open",
+			Some(&(path, mode)),
+		)
+		.await;
 		match descriptor {
-			Ok(OneValue(descriptor)) => Ok(
+			Ok((descriptor,)) => Ok(
 				// SAFETY: This descriptor was just generated by the open() method call, so it must
 				// be fresh and unique.
 				unsafe { descriptor.into_owned() },
@@ -622,18 +621,17 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedReadHandle<'handle, 'invoker, 
 		#[derive(Encode)]
 		#[cbor(array)]
 		struct Params<'descriptor>(#[n(0)] &'descriptor descriptor::Owned, #[n(1)] usize);
-		let ret: Result<OneValue<Option<&'buffer ByteSlice>>, MethodCallError<'_>> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.handle.address,
-				"read",
-				Some(&Params(&self.handle.descriptor, length)),
-			)
-			.await;
+		let ret: Result<(Option<&'buffer ByteSlice>,), MethodCallError<'_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.handle.address,
+			"read",
+			Some(&Params(&self.handle.descriptor, length)),
+		)
+		.await;
 		match ret {
-			Ok(OneValue(Some(bytes))) => Ok(Some(bytes)),
-			Ok(OneValue(None)) => Ok(None),
+			Ok((Some(bytes),)) => Ok(Some(bytes)),
+			Ok((None,)) => Ok(None),
 			Err(MethodCallError::Other(exception)) => {
 				if exception.is_type("java.io.IOException") {
 					// The borrow checker isn’t quite smart enough to notice that we can drop the
@@ -795,7 +793,7 @@ async fn seek_impl<B: Buffer>(
 		#[n(1)] Seek,
 		#[n(2)] i64,
 	);
-	let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
+	let ret: Result<(u64,), MethodCallError<'_>> = component_method(
 		invoker,
 		buffer,
 		address,
@@ -804,7 +802,7 @@ async fn seek_impl<B: Buffer>(
 	)
 	.await;
 	match ret {
-		Ok(OneValue(position)) => Ok(position),
+		Ok((position,)) => Ok(position),
 		Err(MethodCallError::BadParameters(_)) => Err(Error::NegativeSeek),
 		Err(e) => Err(e.into()),
 	}

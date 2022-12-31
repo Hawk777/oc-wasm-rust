@@ -4,7 +4,7 @@ use crate::error::Error;
 use crate::helpers::Ignore;
 use minicbor::bytes::ByteSlice;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, Lockable, OneValue};
+use oc_wasm_helpers::{error::NullAndStringOr, Lockable};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	extref, Address,
@@ -79,7 +79,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get(self) -> Result<&'buffer [u8], Error> {
-		let ret: OneValue<&ByteSlice> =
+		let ret: (&ByteSlice,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "get", None)
 				.await?;
 		Ok(ret.0)
@@ -104,7 +104,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				self.buffer,
 				&self.address,
 				"set",
-				Some(&OneValue(data)),
+				Some(&(data,)),
 			)
 			.await,
 			Error::DataTooLarge,
@@ -123,7 +123,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_label(self) -> Result<&'buffer str, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (&'buffer str,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -148,13 +148,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	pub async fn set_label(self, label: &str) -> Result<&'buffer str, Error> {
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let label = unsafe { extref::String::new(label) };
-		let ret: OneValue<_> = Self::map_errors(
+		let ret: (&'buffer str,) = Self::map_errors(
 			component_method(
 				self.invoker,
 				self.buffer,
 				&self.address,
 				"setLabel",
-				Some(&OneValue(label)),
+				Some(&(label,)),
 			)
 			.await,
 			Error::BadComponent(oc_wasm_safe::error::Error::Unknown),
@@ -168,7 +168,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_size(&mut self) -> Result<usize, Error> {
-		let ret: OneValue<_> =
+		let ret: (usize,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getSize", None)
 				.await?;
 		Ok(ret.0)
@@ -180,7 +180,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_checksum(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<&'_ str> = component_method::<(), _, _>(
+		let ret: (&'_ str,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -220,7 +220,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				self.buffer,
 				&self.address,
 				"makeReadonly",
-				Some(&OneValue(checksum)),
+				Some(&(checksum,)),
 			)
 			.await,
 			Error::BadComponent(oc_wasm_safe::error::Error::Unknown),
@@ -234,7 +234,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_data_size(&mut self) -> Result<usize, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (usize,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -257,7 +257,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_data(self) -> Result<&'buffer [u8], Error> {
-		let ret: OneValue<&ByteSlice> =
+		let ret: (&ByteSlice,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "getData", None)
 				.await?;
 		Ok(ret.0)
@@ -282,7 +282,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 				self.buffer,
 				&self.address,
 				"setData",
-				Some(&OneValue(data)),
+				Some(&(data,)),
 			)
 			.await,
 			Error::DataTooLarge,

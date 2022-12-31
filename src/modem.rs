@@ -6,7 +6,7 @@ use crate::helpers::max_usize;
 use core::num::NonZeroU16;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{Lockable, OneValue, TwoValues};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	extref, Address,
@@ -240,11 +240,11 @@ impl<'buffer, Context> Decode<'buffer, Context> for WakeMessage<'buffer> {
 		d: &mut minicbor::Decoder<'buffer>,
 		context: &mut Context,
 	) -> Result<Self, minicbor::decode::Error> {
-		let inner = TwoValues::<Option<&'buffer str>, bool>::decode(d, context)?;
+		let inner = <(Option<&'buffer str>, bool)>::decode(d, context)?;
 		match inner {
-			TwoValues(None, _) => Ok(Self::Disabled),
-			TwoValues(Some(s), false) => Ok(Self::Exact(s)),
-			TwoValues(Some(s), true) => Ok(Self::Fuzzy(s)),
+			(None, _) => Ok(Self::Disabled),
+			(Some(s), false) => Ok(Self::Exact(s)),
+			(Some(s), true) => Ok(Self::Fuzzy(s)),
 		}
 	}
 }
@@ -255,8 +255,8 @@ impl<Context> Encode<Context> for WakeMessage<'_> {
 		e: &mut minicbor::Encoder<W>,
 		context: &mut Context,
 	) -> Result<(), minicbor::encode::Error<W::Error>> {
-		let inner: TwoValues<Option<extref::String<'_>>, bool> = match self {
-			Self::Disabled => TwoValues(None, false),
+		let inner: (Option<extref::String<'_>>, bool) = match self {
+			Self::Disabled => (None, false),
 			// SAFETY: We are sweeping things under the carpet a bit. In theory a consumer could
 			// create a WakeMessage, then CBOR-encode it themselves, then drop the WakeMessage and
 			// the string or byte array to which it points, then submit the CBOR via
@@ -267,8 +267,8 @@ impl<Context> Encode<Context> for WakeMessage<'_> {
 			// CBOR-encode the WakeMessage). So it seems most useful to just do this, even though
 			// it’s not *technically* completely safe—it is safe when the WakeMessage is passed to
 			// the set_wake_message method in this module.
-			Self::Exact(s) => TwoValues(Some(unsafe { extref::String::new(s) }), false),
-			Self::Fuzzy(s) => TwoValues(Some(unsafe { extref::String::new(s) }), true),
+			Self::Exact(s) => (Some(unsafe { extref::String::new(s) }), false),
+			Self::Fuzzy(s) => (Some(unsafe { extref::String::new(s) }), true),
 		};
 		inner.encode(e, context)
 	}
@@ -335,7 +335,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_wireless(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -352,12 +352,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_open(&mut self, port: NonZeroU16) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (bool,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"isOpen",
-			Some(&OneValue(port)),
+			Some(&(port,)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -373,16 +373,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyOpenPorts`](Error::TooManyOpenPorts)
 	pub async fn open(&mut self, port: NonZeroU16) -> Result<bool, Error> {
-		let ret: Result<OneValue<_>, MethodCallError<'_>> = component_method(
+		let ret: Result<(bool,), MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"open",
-			Some(&OneValue(port)),
+			Some(&(port,)),
 		)
 		.await;
 		match ret {
-			Ok(OneValue(ret)) => Ok(ret),
+			Ok((ret,)) => Ok(ret),
 			Err(MethodCallError::Other(exception)) => {
 				if exception.is_type("java.io.IOException") {
 					const TOO_MANY_OPEN_PORTS: &str = "too many open ports";
@@ -408,12 +408,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn close(&mut self, port: NonZeroU16) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (bool,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"close",
-			Some(&OneValue(port)),
+			Some(&(port,)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -428,7 +428,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn close_all(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
+		let ret: (bool,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "close", None)
 				.await?;
 		Ok(ret.0)
@@ -522,7 +522,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	/// * [`TooManyParts`](Error::TooManyParts)
 	async fn do_send<P: Encode<()>>(&mut self, method: &str, params: &P) -> Result<(), Error> {
-		let ret: Result<OneValue<bool>, MethodCallError<'_>> = component_method(
+		let ret: Result<(bool,), MethodCallError<'_>> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -569,7 +569,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   network card, including if it is an ordinary wired network card.
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_strength(&mut self) -> Result<f64, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (f64,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -589,12 +589,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	///   network card, including if it is an ordinary wired network card.
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_strength(&mut self, strength: f64) -> Result<f64, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (f64,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setStrength",
-			Some(&OneValue(strength)),
+			Some(&(strength,)),
 		)
 		.await?;
 		Ok(ret.0)

@@ -4,7 +4,7 @@ use crate::common::Dimension;
 use crate::error::Error;
 use alloc::vec::Vec;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, Lockable, OneValue, TwoValues};
+use oc_wasm_helpers::{error::NullAndStringOr, Lockable};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for screen components.
@@ -71,7 +71,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_on(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
+		let ret: (bool,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "isOn", None)
 				.await?;
 		Ok(ret.0)
@@ -83,7 +83,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_on(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
+		let ret: (bool,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOn", None)
 				.await?;
 		Ok(ret.0)
@@ -95,7 +95,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_off(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> =
+		let ret: (bool,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOff", None)
 				.await?;
 		Ok(ret.0)
@@ -107,7 +107,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_aspect_ratio(&mut self) -> Result<Dimension, Error> {
-		let ret: TwoValues<f64, f64> = component_method::<(), _, _>(
+		let ret: (f64, f64) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -131,7 +131,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn get_keyboards(&mut self) -> Result<Vec<Address>, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (Vec<Address>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -151,16 +151,16 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`Unsupported`](Error::Unsupported) is returned if the screen is not advanced enough to
 	///   return subpixel-granularity touch data.
 	pub async fn set_precise(&mut self, precise: bool) -> Result<bool, Error> {
-		let ret: NullAndStringOr<'_, OneValue<_>> = component_method(
+		let ret: NullAndStringOr<'_, (bool,)> = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setPrecise",
-			Some(&OneValue(precise)),
+			Some(&(precise,)),
 		)
 		.await?;
 		match ret {
-			NullAndStringOr::Ok(OneValue(f)) => Ok(f),
+			NullAndStringOr::Ok((f,)) => Ok(f),
 			NullAndStringOr::Err("unsupported operation") => Err(Error::Unsupported),
 			NullAndStringOr::Err(_) => {
 				Err(Error::BadComponent(oc_wasm_safe::error::Error::Unknown))
@@ -174,7 +174,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_precise(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -192,12 +192,12 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn set_touch_mode_inverted(&mut self, inverted: bool) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method(
+		let ret: (bool,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"setTouchModeInverted",
-			Some(&OneValue(inverted)),
+			Some(&(inverted,)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -210,7 +210,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_touch_mode_inverted(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<_> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
