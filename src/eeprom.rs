@@ -211,7 +211,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`ChecksumMismatch`](Error::ChecksumMismatch)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn make_read_only(&mut self, checksum: u32) -> Result<(), Error> {
-		let checksum = alloc::format!("{:08x}", checksum);
+		let checksum = alloc::format!("{checksum:08x}");
 		// SAFETY: component_method() both encodes and submits the CBOR in one go.
 		let checksum = unsafe { extref::String::new(&checksum) };
 		Self::map_errors::<Ignore>(
