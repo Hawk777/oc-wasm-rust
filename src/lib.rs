@@ -47,43 +47,7 @@ pub mod fluid;
 pub mod inventory;
 pub mod map_decoder;
 
-use minicbor::{Decode, Encode};
-
-/// A single value, usable as the parameter list for method calls that take one parameter or the
-/// return value for method calls that return one value.
-#[derive(Decode, Encode)]
-#[cbor(array)]
-pub struct OneValue<T>(#[b(0)] pub T);
-
-/// A pair of values, usable as the parameter list for method calls that take two parameters or the
-/// return value for method calls that return two values.
-#[derive(Decode, Encode)]
-#[cbor(array)]
-pub struct TwoValues<T, U>(#[b(0)] pub T, #[b(1)] pub U);
-
-/// A triple of values, usable as the parameter list for method calls that take three parameters or
-/// the return value for method calls that return three values.
-#[derive(Decode, Encode)]
-#[cbor(array)]
-pub struct ThreeValues<T, U, V>(#[b(0)] pub T, #[b(1)] pub U, #[b(2)] pub V);
-
-/// A quadruple of values, usable as the parameter list for method calls that take four parameters
-/// or the return value for method calls that return four values.
-#[derive(Decode, Encode)]
-#[cbor(array)]
-pub struct FourValues<T, U, V, W>(#[b(0)] pub T, #[b(1)] pub U, #[b(2)] pub V, #[b(3)] pub W);
-
-/// A quintuple of values, usable as the parameter list for method calls that take five parameters
-/// or the return value for method calls that return five values.
-#[derive(Decode, Encode)]
-#[cbor(array)]
-pub struct FiveValues<T, U, V, W, X>(
-	#[b(0)] pub T,
-	#[b(1)] pub U,
-	#[b(2)] pub V,
-	#[b(3)] pub W,
-	#[b(4)] pub X,
-);
+use minicbor::Decode;
 
 /// A component that can be given an [`Invoker`](oc_wasm_safe::component::Invoker) and a byte
 /// buffer in order to access its methods.
