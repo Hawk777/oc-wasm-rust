@@ -1,7 +1,11 @@
 use core::convert::TryFrom;
 use minicbor::{Decode, Encode};
 
-pub use oc_wasm_helpers::Lockable;
+pub use oc_wasm_helpers::{
+	fluid::{Fluid, Tank},
+	inventory::ItemStack,
+	Lockable,
+};
 
 /// An error returned when converting an invalid value to an enumeration.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
