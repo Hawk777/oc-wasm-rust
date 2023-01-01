@@ -20,6 +20,7 @@
 //! use alloc::vec::Vec;
 //! use cassette::Cassette;
 //! use oc_wasm_futures::sleep;
+//! use oc_wasm_opencomputers::prelude::*;
 //! use oc_wasm_opencomputers::{gpu, screen};
 //! use oc_wasm_opencomputers::common::{Dimension, Point};
 //! use oc_wasm_safe::{component, computer};
@@ -162,6 +163,7 @@ pub mod gpu;
 pub mod inventory;
 pub mod keyboard;
 pub mod modem;
+pub mod prelude;
 pub mod redstone;
 pub mod robot;
 pub mod screen;
