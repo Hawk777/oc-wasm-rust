@@ -16,19 +16,19 @@ version = "^0.5"
 [dependencies.minicbor]
 default-features = false
 features = ["derive"]
-version = "^0.18"
+version = "^0.19"
 
 [dependencies.oc-wasm-futures]
 default-features = false
-version = "^0.5"
+version = "^0.6"
 
 [dependencies.oc-wasm-helpers]
 default-features = false
-version = "^0.3"
+version = "^0.5"
 
 [dependencies.oc-wasm-safe]
 default-features = false
-version = "^0.3"
+version = "^0.4"
 
 [features]
 default = ["std"]
