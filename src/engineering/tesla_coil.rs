@@ -2,7 +2,7 @@
 
 use crate::error::Error;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{Lockable, OneValue};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,
@@ -97,7 +97,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -114,7 +114,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -131,7 +131,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -153,7 +153,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			self.buffer,
 			&self.address,
 			"setRSMode",
-			Some(&OneValue(level == SignalLevel::Low)),
+			Some(&(level == SignalLevel::Low,)),
 		)
 		.await?;
 		Ok(())
@@ -171,7 +171,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			self.buffer,
 			&self.address,
 			"setPowerMode",
-			Some(&OneValue(level == PowerLevel::High)),
+			Some(&(level == PowerLevel::High,)),
 		)
 		.await;
 		match ret {

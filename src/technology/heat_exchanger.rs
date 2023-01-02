@@ -2,7 +2,7 @@
 
 use crate::error::Error;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{fluid::Tank, Lockable, OneValue};
+use oc_wasm_helpers::{fluid::Tank, Lockable};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for heat exchangers.
@@ -103,7 +103,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn tank(self, method: &str) -> Result<Tank<'buffer>, Error> {
-		let ret: OneValue<Tank<'buffer>> =
+		let ret: (Tank<'buffer>,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok(ret.0)

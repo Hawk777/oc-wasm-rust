@@ -3,7 +3,7 @@
 use crate::error::Error;
 use minicbor::{Decode, Decoder};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{Lockable, OneValue};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for core sample drill components.
@@ -73,7 +73,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn progress(&mut self) -> Result<f32, Error> {
-		let ret: OneValue<f32> = component_method::<(), _, _>(
+		let ret: (f32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -90,7 +90,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_finished(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -244,7 +244,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn vein_expected_yield(&mut self) -> Result<Option<u32>, Error> {
-		let ret: OneValue<i32> = component_method::<(), _, _>(
+		let ret: (i32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -261,7 +261,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -278,7 +278,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

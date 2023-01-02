@@ -6,7 +6,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{
 	fluid::{Fluid, Tank},
 	inventory::{ItemStack, OptionItemStack},
-	map_decoder, Lockable, OneValue,
+	map_decoder, Lockable,
 };
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
@@ -77,7 +77,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -94,7 +94,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -160,7 +160,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			}
 		}
 
-		let ret: OneValue<Return<'buffer>> = component_method::<(), _, _>(
+		let ret: (Return<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -177,7 +177,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn output_tank(self) -> Result<Tank<'buffer>, Error> {
-		let ret: OneValue<Tank<'buffer>> = component_method::<(), _, _>(
+		let ret: (Tank<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -194,17 +194,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn recipe(self) -> Result<Option<Recipe<'buffer>>, Error> {
-		let ret: Result<OneValue<Recipe<'buffer>>, MethodCallError<'_>> =
-			component_method::<(), _, _>(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				"getRecipe",
-				None,
-			)
-			.await;
+		let ret: Result<(Recipe<'buffer>,), MethodCallError<'_>> = component_method::<(), _, _>(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"getRecipe",
+			None,
+		)
+		.await;
 		match ret {
-			Ok(OneValue(r)) => Ok(Some(r)),
+			Ok((r,)) => Ok(Some(r)),
 			Err(e @ MethodCallError::BadParameters(exp)) => {
 				// If processQueue.get(0).recipe is null, this exception is thrown.
 				const MESSAGE: &str = "The recipe of the refinery is invalid";
@@ -238,7 +237,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn has_valid_recipe(&mut self) -> Result<bool, Error> {
-		let ret: Result<OneValue<bool>, MethodCallError<'_>> = component_method::<(), _, _>(
+		let ret: Result<(bool,), MethodCallError<'_>> = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -247,7 +246,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		)
 		.await;
 		match ret {
-			Ok(OneValue(x)) => Ok(x),
+			Ok((x,)) => Ok(x),
 			Err(e @ MethodCallError::Other(exp)) => {
 				// Immersive Engineering implements this method by checking whether
 				// processQueue.get(0).recipe is null or not. If processQueue is empty, this throws
@@ -286,7 +285,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	async fn canisters(self, method: &str) -> Result<Canisters<'buffer>, Error> {
-		let ret: OneValue<Canisters<'buffer>> =
+		let ret: (Canisters<'buffer>,) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, method, None)
 				.await?;
 		Ok(ret.0)

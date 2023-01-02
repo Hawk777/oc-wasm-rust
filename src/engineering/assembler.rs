@@ -6,7 +6,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{
 	fluid::Tank,
 	inventory::{ItemStack, OptionItemStack},
-	Lockable, OneValue, TwoValues,
+	Lockable,
 };
 use oc_wasm_safe::{component::Invoker, Address};
 
@@ -92,17 +92,16 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadRecipe`](Error::BadRecipe)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn has_ingredients(&mut self, slot: RecipeSlot) -> Result<bool, Error> {
-		let ret: Result<OneValue<bool>, oc_wasm_safe::component::MethodCallError<'_>> =
-			component_method(
-				self.invoker,
-				self.buffer,
-				&self.address,
-				"hasIngredients",
-				Some(&OneValue(slot.get())),
-			)
-			.await;
+		let ret: Result<(bool,), oc_wasm_safe::component::MethodCallError<'_>> = component_method(
+			self.invoker,
+			self.buffer,
+			&self.address,
+			"hasIngredients",
+			Some(&(slot.get(),)),
+		)
+		.await;
 		match ret {
-			Ok(OneValue(ret)) => Ok(ret),
+			Ok((ret,)) => Ok(ret),
 			Err(e @ oc_wasm_safe::component::MethodCallError::BadParameters(exp)) => {
 				if exp.is_type("java.lang.IllegalArgumentException") {
 					const INVALID_1: &str = "The requested recipe is invalid";
@@ -132,12 +131,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn recipe(self, slot: RecipeSlot) -> Result<Recipe<'buffer>, Error> {
-		let ret: OneValue<Recipe<'buffer>> = component_method(
+		let ret: (Recipe<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getRecipe",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -151,12 +150,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_valid_recipe(&mut self, slot: RecipeSlot) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method(
+		let ret: (bool,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"isValidRecipe",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -168,12 +167,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn tank(self, tank: TankNumber) -> Result<Tank<'buffer>, Error> {
-		let ret: OneValue<Tank<'buffer>> = component_method(
+		let ret: (Tank<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getTank",
-			Some(&OneValue(tank.get())),
+			Some(&(tank.get(),)),
 		)
 		.await?;
 		Ok(ret.0)
@@ -185,7 +184,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -202,7 +201,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -222,12 +221,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		slot: ItemStorageSlot,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getStackInSlot",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -239,12 +238,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn buffer_stack(self, slot: RecipeSlot) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getBufferStack",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -283,7 +282,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			self.buffer,
 			&self.address,
 			"setEnabled",
-			Some(&TwoValues(slot.get(), enable)),
+			Some(&(slot.get(), enable)),
 		)
 		.await?;
 		Ok(())

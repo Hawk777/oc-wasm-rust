@@ -7,7 +7,7 @@ use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{
 	fluid::{Fluid, OptionFluid, Tank},
 	inventory::{ItemStack, OptionItemStack},
-	Lockable, OneValue,
+	Lockable,
 };
 use oc_wasm_safe::{component::Invoker, Address};
 
@@ -125,7 +125,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 			self.buffer,
 			&self.address,
 			"getRecipe",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		if let Some(input) = ret.input {
@@ -146,12 +146,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn input_stack(self, slot: InputSlot) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getInputStack",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -163,7 +163,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn output_stack(self) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method::<(), _, _>(
+		let ret: (OptionItemStack<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -180,7 +180,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn fluid(self) -> Result<Tank<'buffer>, Error> {
-		let ret: OneValue<Tank<'buffer>> = component_method::<(), _, _>(
+		let ret: (Tank<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -197,7 +197,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn empty_canisters(self) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method::<(), _, _>(
+		let ret: (OptionItemStack<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -214,7 +214,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn full_canisters(self) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method::<(), _, _>(
+		let ret: (OptionItemStack<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -231,7 +231,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -248,7 +248,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -265,7 +265,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,

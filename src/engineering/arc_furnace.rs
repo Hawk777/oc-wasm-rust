@@ -7,7 +7,7 @@ use crate::{
 use oc_wasm_futures::invoke::{component_method, Buffer};
 use oc_wasm_helpers::{
 	inventory::{ItemStack, OptionItemStack},
-	Lockable, OneValue,
+	Lockable,
 };
 use oc_wasm_safe::{component::Invoker, Address};
 
@@ -96,7 +96,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn max_energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -113,7 +113,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn energy_stored(&mut self) -> Result<u32, Error> {
-		let ret: OneValue<u32> = component_method::<(), _, _>(
+		let ret: (u32,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -130,7 +130,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn is_active(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -150,12 +150,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		slot: InputSlot,
 	) -> Result<Option<ItemStackWithProgress<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStackWithProgress<'buffer>> = component_method(
+		let ret: (OptionItemStackWithProgress<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getInputStack",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -167,12 +167,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn output_stack(self, slot: OutputSlot) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getOutputStack",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -187,12 +187,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		self,
 		slot: AdditiveSlot,
 	) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getAdditiveStack",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())
@@ -204,7 +204,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn slag_stack(self) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method::<(), _, _>(
+		let ret: (OptionItemStack<'buffer>,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -221,7 +221,7 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn has_electrodes(&mut self) -> Result<bool, Error> {
-		let ret: OneValue<bool> = component_method::<(), _, _>(
+		let ret: (bool,) = component_method::<(), _, _>(
 			self.invoker,
 			self.buffer,
 			&self.address,
@@ -238,12 +238,12 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn electrode(self, slot: ElectrodeSlot) -> Result<Option<ItemStack<'buffer>>, Error> {
-		let ret: OneValue<OptionItemStack<'buffer>> = component_method(
+		let ret: (OptionItemStack<'buffer>,) = component_method(
 			self.invoker,
 			self.buffer,
 			&self.address,
 			"getElectrode",
-			Some(&OneValue(slot.get())),
+			Some(&(slot.get(),)),
 		)
 		.await?;
 		Ok(ret.0.into())

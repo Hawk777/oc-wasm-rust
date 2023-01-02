@@ -6,7 +6,6 @@ use minicbor::data::Type;
 use minicbor::decode::Decoder;
 use minicbor::Decode;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::OneValue;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// A value which, when CBOR-decoded, does not consume any data items and always successfully does
@@ -90,7 +89,7 @@ pub async fn enable_computer_control(
 		buffer,
 		address,
 		"enableComputerControl",
-		Some(&OneValue(enable)),
+		Some(&(enable,)),
 	)
 	.await?;
 	Ok(())
@@ -112,14 +111,8 @@ pub async fn set_enabled(
 ) -> Result<(), Error> {
 	const NOT_COMPUTER_CONTROLLED: &str =
 		"Computer control must be enabled to enable or disable the machine";
-	let ret: Result<(), oc_wasm_safe::component::MethodCallError<'_>> = component_method(
-		invoker,
-		buffer,
-		address,
-		"setEnabled",
-		Some(&OneValue(enable)),
-	)
-	.await;
+	let ret: Result<(), oc_wasm_safe::component::MethodCallError<'_>> =
+		component_method(invoker, buffer, address, "setEnabled", Some(&(enable,))).await;
 	match ret {
 		Ok(()) => Ok(()),
 		Err(e @ oc_wasm_safe::component::MethodCallError::Other(exp)) => {
