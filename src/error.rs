@@ -48,7 +48,7 @@ impl Error {
 impl Display for Error {
 	fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), core::fmt::Error> {
 		match self {
-			Self::BadComponent(e) => write!(f, "nonexistent or incorrect component: {}", e),
+			Self::BadComponent(e) => write!(f, "nonexistent or incorrect component: {e}"),
 			_ => self.as_str().fmt(f),
 		}
 	}
