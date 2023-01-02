@@ -45,7 +45,7 @@ impl<'buffer, Context> Decode<'buffer, Context> for ItemStackWithProgress<'buffe
 /// The `'buffer` lifetime is the lifetime of the buffer holding strings to which the object
 /// refers.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct OptionItemStackWithProgress<'buffer>(pub Option<ItemStackWithProgress<'buffer>>);
+pub(crate) struct OptionItemStackWithProgress<'buffer>(pub Option<ItemStackWithProgress<'buffer>>);
 
 impl<'buffer, Context> Decode<'buffer, Context> for OptionItemStackWithProgress<'buffer> {
 	fn decode(
@@ -66,7 +66,7 @@ impl<'buffer> From<OptionItemStackWithProgress<'buffer>>
 
 /// A map-decoding builder for an [`OptionItemStackWithProgress`](OptionItemStackWithProgress).
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct OptionItemStackWithProgressBuilder<'buffer> {
+pub(crate) struct OptionItemStackWithProgressBuilder<'buffer> {
 	/// The item stack.
 	pub item_stack: OptionItemStackBuilder<'buffer>,
 
