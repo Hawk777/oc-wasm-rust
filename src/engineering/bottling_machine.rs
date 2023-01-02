@@ -1,8 +1,8 @@
 //! Provides high-level access to the bottling machine APIs.
 
-use crate::error::Error;
+use crate::{common::Tank, error::Error};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{fluid::Tank, Lockable};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for bottling machine components.

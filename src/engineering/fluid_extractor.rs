@@ -2,13 +2,12 @@
 //!
 //! The fermenter and squeezer expose identical APIs, so the same wrapper is used for both.
 
-use crate::error::Error;
-use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{
-	fluid::{Fluid, OptionFluid, Tank},
-	inventory::{ItemStack, OptionItemStack},
-	Lockable,
+use crate::{
+	common::{Fluid, ItemStack, Tank},
+	error::Error,
 };
+use oc_wasm_futures::invoke::{component_method, Buffer};
+use oc_wasm_helpers::{fluid::OptionFluid, inventory::OptionItemStack, Lockable};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for fermenters.

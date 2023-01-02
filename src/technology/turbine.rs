@@ -3,9 +3,9 @@
 //! The gas turbine and steam turbine expose very similar APIs, so the same wrapper is used for
 //! both with a small amount of logic to switch between the two turbines where needed.
 
-use crate::error::Error;
+use crate::{common::Tank, error::Error};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{fluid::Tank, Lockable};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for gas turbines.

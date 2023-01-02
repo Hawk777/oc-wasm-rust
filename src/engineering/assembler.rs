@@ -1,13 +1,12 @@
 //! Provides high-level access to the assembler APIs.
 
-use crate::error::Error;
+use crate::{
+	common::{ItemStack, Tank},
+	error::Error,
+};
 use minicbor::{Decode, Decoder};
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{
-	fluid::Tank,
-	inventory::{ItemStack, OptionItemStack},
-	Lockable,
-};
+use oc_wasm_helpers::{inventory::OptionItemStack, Lockable};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for assembler components.

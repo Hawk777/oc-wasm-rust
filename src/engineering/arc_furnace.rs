@@ -1,14 +1,11 @@
 //! Provides high-level access to the arc furnace APIs.
 
 use crate::{
-	common::{ItemStackWithProgress, OptionItemStackWithProgress},
+	common::{ItemStack, ItemStackWithProgress, OptionItemStackWithProgress},
 	error::Error,
 };
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{
-	inventory::{ItemStack, OptionItemStack},
-	Lockable,
-};
+use oc_wasm_helpers::{inventory::OptionItemStack, Lockable};
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for arc furnace components.

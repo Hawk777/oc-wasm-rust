@@ -1,8 +1,12 @@
 //! Data types that are used by more than one Immersive machine.
 
 use minicbor::{Decode, Decoder};
+pub use oc_wasm_helpers::{
+	fluid::{Fluid, Tank},
+	inventory::ItemStack,
+};
 use oc_wasm_helpers::{
-	inventory::{ItemStack, OptionItemStack, OptionItemStackBuilder},
+	inventory::{OptionItemStack, OptionItemStackBuilder},
 	map_decoder,
 };
 

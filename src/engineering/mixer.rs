@@ -1,11 +1,11 @@
 //! Provides high-level access to the mixer APIs.
 
 use crate::{
-	common::{ItemStackWithProgress, OptionItemStackWithProgress},
+	common::{ItemStackWithProgress, OptionItemStackWithProgress, Tank},
 	error::Error,
 };
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{fluid::Tank, Lockable};
+use oc_wasm_helpers::Lockable;
 use oc_wasm_safe::{component::Invoker, Address};
 
 /// The type name for mixer components.
