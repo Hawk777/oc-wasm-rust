@@ -1,6 +1,6 @@
 //! Provides high-level access to the robot component APIs.
 
-use crate::common::{RelativeSide, Rgb, Side, TryFromIntError};
+use crate::common::Rgb;
 use crate::error::Error;
 use core::convert::TryFrom;
 use core::fmt::{Display, Formatter};
@@ -8,7 +8,11 @@ use core::num::NonZeroU32;
 use core::str::FromStr;
 use minicbor::Decode;
 use oc_wasm_futures::invoke::{component_method, Buffer};
-use oc_wasm_helpers::{error::NullAndStringOr, Lockable};
+use oc_wasm_helpers::{
+	error::NullAndStringOr,
+	sides::{Relative as RelativeSide, Side},
+	Lockable,
+};
 use oc_wasm_safe::{
 	component::{Invoker, MethodCallError},
 	Address,
@@ -72,7 +76,7 @@ impl From<MoveDirection> for RelativeSide {
 }
 
 impl TryFrom<u8> for MoveDirection {
-	type Error = TryFromIntError;
+	type Error = oc_wasm_helpers::error::TryFromInt;
 
 	fn try_from(x: u8) -> Result<Self, Self::Error> {
 		match x {
@@ -80,7 +84,7 @@ impl TryFrom<u8> for MoveDirection {
 			1 => Ok(Self::Up),
 			2 => Ok(Self::Back),
 			3 => Ok(Self::Front),
-			_ => Err(TryFromIntError(())),
+			_ => Err(oc_wasm_helpers::error::TryFromInt),
 		}
 	}
 }
@@ -149,14 +153,14 @@ impl From<ActionSide> for RelativeSide {
 }
 
 impl TryFrom<u8> for ActionSide {
-	type Error = TryFromIntError;
+	type Error = oc_wasm_helpers::error::TryFromInt;
 
 	fn try_from(x: u8) -> Result<Self, Self::Error> {
 		match x {
 			0 => Ok(Self::Bottom),
 			1 => Ok(Self::Top),
 			3 => Ok(Self::Front),
-			_ => Err(TryFromIntError(())),
+			_ => Err(oc_wasm_helpers::error::TryFromInt),
 		}
 	}
 }

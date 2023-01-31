@@ -5,7 +5,6 @@
 //! At this time, database interaction APIs are not supported, and a very few other miscellaneous
 //! APIs are also missing. They may be added in a future version.
 
-use crate::common::{RelativeSide, Side};
 use crate::error::Error;
 use crate::helpers::{max_of_usizes, Ignore};
 use alloc::vec::Vec;
@@ -16,6 +15,7 @@ use oc_wasm_helpers::{
 	error::NullAndStringOr,
 	fluid::{Fluid, Tank},
 	inventory::{ItemStack, OptionItemStack},
+	sides::{Relative as RelativeSide, Side},
 	Lockable,
 };
 use oc_wasm_safe::{

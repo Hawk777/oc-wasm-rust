@@ -2,23 +2,12 @@ use core::convert::TryFrom;
 use minicbor::{Decode, Encode};
 
 pub use oc_wasm_helpers::{
+	error::TryFromInt as TryFromIntError,
 	fluid::{Fluid, Tank},
 	inventory::ItemStack,
+	sides::{Absolute as AbsoluteSide, Relative as RelativeSide, Side, BLOCK_SIDES},
 	Lockable,
 };
-
-/// An error returned when converting an invalid value to an enumeration.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TryFromIntError(pub(crate) ());
-
-impl core::fmt::Display for TryFromIntError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
-		"invalid value".fmt(f)
-	}
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for TryFromIntError {}
 
 /// A rectangular dimension
 #[derive(Clone, Copy, Debug, Decode, Encode, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -52,108 +41,6 @@ pub struct Vector2 {
 	/// The vector’s Y component.
 	pub y: i32,
 }
-
-/// The number of sides on a block.
-pub const BLOCK_SIDES: usize = 6;
-
-/// A trait implemented by both absolute and relative block side enumerations.
-pub trait Side: Into<u8> + Into<usize> {}
-
-/// An absolute side of a block.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum AbsoluteSide {
-	Down,
-	Up,
-	North,
-	South,
-	West,
-	East,
-}
-
-impl From<AbsoluteSide> for u8 {
-	fn from(x: AbsoluteSide) -> Self {
-		match x {
-			AbsoluteSide::Down => 0,
-			AbsoluteSide::Up => 1,
-			AbsoluteSide::North => 2,
-			AbsoluteSide::South => 3,
-			AbsoluteSide::West => 4,
-			AbsoluteSide::East => 5,
-		}
-	}
-}
-
-impl From<AbsoluteSide> for usize {
-	fn from(x: AbsoluteSide) -> Self {
-		u8::from(x) as usize
-	}
-}
-
-impl TryFrom<u8> for AbsoluteSide {
-	type Error = TryFromIntError;
-
-	fn try_from(x: u8) -> Result<Self, Self::Error> {
-		match x {
-			0 => Ok(AbsoluteSide::Down),
-			1 => Ok(AbsoluteSide::Up),
-			2 => Ok(AbsoluteSide::North),
-			3 => Ok(AbsoluteSide::South),
-			4 => Ok(AbsoluteSide::West),
-			5 => Ok(AbsoluteSide::East),
-			_ => Err(TryFromIntError(())),
-		}
-	}
-}
-
-impl Side for AbsoluteSide {}
-
-/// A relative side of a block.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum RelativeSide {
-	Bottom,
-	Top,
-	Back,
-	Front,
-	Right,
-	Left,
-}
-
-impl From<RelativeSide> for u8 {
-	fn from(x: RelativeSide) -> Self {
-		match x {
-			RelativeSide::Bottom => 0,
-			RelativeSide::Top => 1,
-			RelativeSide::Back => 2,
-			RelativeSide::Front => 3,
-			RelativeSide::Right => 4,
-			RelativeSide::Left => 5,
-		}
-	}
-}
-
-impl From<RelativeSide> for usize {
-	fn from(x: RelativeSide) -> Self {
-		u8::from(x) as usize
-	}
-}
-
-impl TryFrom<u8> for RelativeSide {
-	type Error = TryFromIntError;
-
-	fn try_from(x: u8) -> Result<Self, Self::Error> {
-		match x {
-			0 => Ok(RelativeSide::Bottom),
-			1 => Ok(RelativeSide::Top),
-			2 => Ok(RelativeSide::Back),
-			3 => Ok(RelativeSide::Front),
-			4 => Ok(RelativeSide::Right),
-			5 => Ok(RelativeSide::Left),
-			_ => Err(TryFromIntError(())),
-		}
-	}
-}
-
-impl Side for RelativeSide {}
 
 /// The number of colours in the standard Minecraft colour table.
 pub const COLOURS: usize = 16;
@@ -209,7 +96,7 @@ impl From<Colour> for usize {
 }
 
 impl TryFrom<u8> for Colour {
-	type Error = TryFromIntError;
+	type Error = oc_wasm_helpers::error::TryFromInt;
 
 	fn try_from(x: u8) -> Result<Self, Self::Error> {
 		match x {
@@ -229,7 +116,7 @@ impl TryFrom<u8> for Colour {
 			13 => Ok(Colour::Green),
 			14 => Ok(Colour::Red),
 			15 => Ok(Colour::Black),
-			_ => Err(TryFromIntError(())),
+			_ => Err(oc_wasm_helpers::error::TryFromInt),
 		}
 	}
 }
