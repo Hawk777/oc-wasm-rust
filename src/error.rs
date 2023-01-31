@@ -40,3 +40,16 @@ impl<'buffer, Context, T: Decode<'buffer, Context>> Decode<'buffer, Context>
 		}
 	}
 }
+
+/// An error returned when converting an invalid value to an enumeration.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TryFromInt;
+
+impl core::fmt::Display for TryFromInt {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+		"invalid value".fmt(f)
+	}
+}
+
+#[cfg(feature = "std")]
+impl std::error::Error for TryFromInt {}
