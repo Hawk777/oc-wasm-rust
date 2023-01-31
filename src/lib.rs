@@ -46,6 +46,7 @@ pub mod error;
 pub mod fluid;
 pub mod inventory;
 pub mod map_decoder;
+pub mod sides;
 
 use minicbor::Decode;
 
