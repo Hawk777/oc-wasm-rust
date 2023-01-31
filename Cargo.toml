@@ -1,6 +1,6 @@
 [package]
 name = "oc-wasm-helpers"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Christopher Head <chead@chead.ca>"]
 edition = "2021"
 description = "Helpers used by multiple OC-Wasm high-level APIs"
