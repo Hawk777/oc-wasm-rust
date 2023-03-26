@@ -1,0 +1,34 @@
+[package]
+name = "oc-wasm-applied-energistics"
+version = "0.1.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+description = "High-level APIs for Applied Energistics"
+repository = "https://gitlab.com/Hawk777/oc-wasm-applied-energistics"
+license = "GPL-3.0-only"
+keywords = ["applied", "energistics", "minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
+[dependencies.minicbor]
+default-features = false
+features = ["alloc", "derive"]
+version = "^0.19"
+
+[dependencies.oc-wasm-futures]
+default-features = false
+version = "^0.6"
+
+[dependencies.oc-wasm-helpers]
+default-features = false
+version = "^0.5.1"
+
+[dependencies.oc-wasm-safe]
+default-features = false
+version = "^0.4"
+
+[features]
+default = ["std"]
+std = ["oc-wasm-safe/std"]
+
+[package.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"
