@@ -15,32 +15,21 @@
 //! # Example
 //! ```
 //! extern crate alloc;
-//! use alloc::boxed::Box;
-//! use alloc::string::String;
 //! use alloc::vec::Vec;
-//! use cassette::Cassette;
 //! use oc_wasm_futures::sleep;
 //! use oc_wasm_opencomputers::prelude::*;
 //! use oc_wasm_opencomputers::{gpu, screen};
 //! use oc_wasm_opencomputers::common::{Dimension, Point};
 //! use oc_wasm_safe::{component, computer};
-//! use once_cell::unsync::OnceCell;
-//! use core::future::Future;
 //! use core::panic::PanicInfo;
-//! use core::pin::Pin;
-//! use wee_alloc::WeeAlloc;
 //!
 //! #[global_allocator]
-//! static ALLOC: WeeAlloc<'_> = WeeAlloc::INIT;
+//! static ALLOC: lol_alloc::AssumeSingleThreaded<lol_alloc::LeakingAllocator> =
+//! 	unsafe { lol_alloc::AssumeSingleThreaded::new(lol_alloc::LeakingAllocator::new()) };
 //!
-//! fn panic_hook(info: &PanicInfo<'_>) {
-//! 	if let Some(s) = info.payload().downcast_ref::<&str>() {
-//! 		computer::error(s);
-//! 	} else if let Some(s) = info.payload().downcast_ref::<String>() {
-//! 		computer::error(s);
-//! 	} else {
-//! 		computer::error("panic occurred");
-//! 	}
+//! #[panic_handler]
+//! fn panic_hook(_: &PanicInfo<'_>) -> ! {
+//! 	computer::error("panic occurred");
 //! }
 //!
 //! async fn main_impl() -> Result<(), oc_wasm_opencomputers::error::Error> {
@@ -83,44 +72,16 @@
 //! 	}
 //! }
 //!
-//! async fn main() {
+//! async fn main() -> core::convert::Infallible {
 //! 	match main_impl().await {
-//! 		Ok(()) => (),
+//! 		Ok(()) => computer::error("main task terminated"),
 //! 		Err(e) => computer::error(e.as_str()),
 //! 	}
 //! }
 //!
 //! #[no_mangle]
-//! pub extern "C" fn run(_: i32) -> i32 {
-//! 	static mut PANIC_HOOK_SET: bool = false;
-//! 	static mut EXECUTOR: OnceCell<Cassette<Pin<Box<dyn Future<Output = ()>>>>> = OnceCell::new();
-//!
-//! 	// SAFETY: run() is not reentrant and never touches the PANIC_HOOK_SET variable anywhere else
-//! 	// in its body, so run() will never create a second mutable reference. PANIC_HOOK_SET is local
-//! 	// to run(), so nobody else can create a second mutable reference on the same thread. OC-Wasm
-//! 	// is single-threaded, so no other threads can call run() at the same time.
-//! 	let panic_hook_set = unsafe { &mut PANIC_HOOK_SET };
-//! 	if !*panic_hook_set {
-//! 		std::panic::set_hook(Box::new(panic_hook));
-//! 		*panic_hook_set = true;
-//! 	}
-//!
-//! 	// SAFETY: run() is not reentrant and never touches the EXECUTOR variable anywhere else in its
-//! 	// body, so run() will never create a second mutable reference. EXECUTOR is local to run(), so
-//! 	// nobody else can create a second mutable reference on the same thread. OC-Wasm is
-//! 	// single-threaded, so no other threads can call run() at the same time.
-//! 	let executor = unsafe { &mut EXECUTOR };
-//! 	executor.get_or_init(|| Cassette::new(Box::pin(main())));
-//! 	let executor = executor.get_mut().unwrap_or_else(
-//! 		// SAFETY: We just called get_or_init(), so it must be populated.
-//! 		|| unsafe { core::hint::unreachable_unchecked() },
-//! 	);
-//!
-//! 	sleep::check_for_wakeups();
-//! 	if executor.poll_on().is_some() {
-//! 		computer::error("main task terminated");
-//! 	}
-//! 	sleep::shortest_requested()
+//! pub extern "C" fn run(arg: i32) -> i32 {
+//!		oc_wasm_cassette::run(arg, async_main)
 //! }
 //! ```
 
