@@ -43,11 +43,15 @@ impl Buffer for &mut [u8] {
 		// slice. We don’t want to affect self, since we want to retain knowledge of the whole
 		// slice for subsequent uses as a buffer, so make a copy of the reference first and let
 		// encode mutate that.
+		// After the call to encode, `target` references the remaining unwritten buffer space.
+		// We return the part of the buffer that has been written to.
+		let buffer_len = self.len();
 		let mut target: &mut [u8] = self;
-		match encode(x, &mut target) {
-			Ok(()) => target,
-			Err(_) => panic_or_trap!("failed to encode component call parameters"),
+		if encode(x, &mut target).is_err() {
+			panic_or_trap!("failed to encode component call parameters")
 		}
+		let written_len = buffer_len - target.len();
+		&self[..written_len]
 	}
 
 	fn end_into<'invoker>(&mut self, call: MethodCall<'invoker>) -> InvokeEndResult<'invoker> {
