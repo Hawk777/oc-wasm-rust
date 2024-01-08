@@ -707,7 +707,7 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedCraftingOperation<'handle, 'in
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
-	/// * [`Complete`](Error::Complete)
+	/// * [`Completed`](Error::Completed)
 	/// * [`Computing`](Error::Computing)
 	/// * [`MissingResources`](Error::MissingResources)
 	pub async fn cancel(&mut self) -> Result<(), Error> {
