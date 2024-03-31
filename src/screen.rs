@@ -83,7 +83,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_on(&mut self) -> Result<bool, Error> {
-		let ret: (bool,) =
+		let ret: (bool, bool) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOn", None)
 				.await?;
 		Ok(ret.0)
@@ -95,7 +95,7 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	/// * [`BadComponent`](Error::BadComponent)
 	/// * [`TooManyDescriptors`](Error::TooManyDescriptors)
 	pub async fn turn_off(&mut self) -> Result<bool, Error> {
-		let ret: (bool,) =
+		let ret: (bool, bool) =
 			component_method::<(), _, _>(self.invoker, self.buffer, &self.address, "turnOff", None)
 				.await?;
 		Ok(ret.0)
