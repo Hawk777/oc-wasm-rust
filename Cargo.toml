@@ -12,7 +12,7 @@ categories = ["games"]
 [dependencies.minicbor]
 default-features = false
 features = ["alloc", "derive"]
-version = "^0.20"
+version = "^0.21"
 
 [dependencies.oc-wasm-futures]
 default-features = false
