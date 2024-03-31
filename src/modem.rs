@@ -692,7 +692,7 @@ impl<'buffer, Context, const N: usize> Decode<'buffer, Context> for Message<'buf
 				let port = d.f64()? as u16;
 				let distance = d.f64()?;
 				let mut parts = [PacketPart::Null; N];
-				for i in parts[..parts_count].iter_mut() {
+				for i in &mut parts[..parts_count] {
 					*i = PacketPart::decode(d, context)?;
 				}
 				Ok(Self {
