@@ -48,6 +48,7 @@ pub mod inventory;
 pub mod map_decoder;
 pub mod sides;
 
+#[cfg(feature = "alloc")]
 use minicbor::Decode;
 
 /// A component that can be given an [`Invoker`](oc_wasm_safe::component::Invoker) and a byte
