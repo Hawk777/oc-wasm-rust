@@ -58,7 +58,7 @@ pub enum PacketPart<'a> {
 }
 
 impl From<()> for PacketPart<'_> {
-	fn from(_: ()) -> Self {
+	fn from((): ()) -> Self {
 		Self::Null
 	}
 }
