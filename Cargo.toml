@@ -16,7 +16,7 @@ version = "^0.5"
 [dependencies.minicbor]
 default-features = false
 features = ["derive"]
-version = "^0.20"
+version = "^0.21"
 
 [dependencies.oc-wasm-futures]
 default-features = false
