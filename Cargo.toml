@@ -11,7 +11,7 @@ categories = ["games"]
 
 [dependencies.minicbor]
 default-features = false
-version = "^0.20"
+version = "^0.21"
 
 [dependencies.oc-wasm-safe]
 default-features = false
@@ -19,7 +19,7 @@ version = "^0.5"
 
 [dependencies.ordered-float]
 default-features = false
-version = "^3"
+version = "^4"
 
 [features]
 default = ["alloc", "proper-waker"]
