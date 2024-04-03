@@ -3,6 +3,7 @@
 //! Keyboards, while components, do not expose any methods, so no component wrapper is provided in
 //! this module.
 
+use crate::helpers::decode_u32_from_signal;
 use core::num::NonZeroU32;
 use minicbor::{Decode, Decoder};
 use oc_wasm_safe::Address;
@@ -100,8 +101,7 @@ impl<'buffer> KeySignal<'buffer> {
 		_: &mut Context,
 	) -> Result<Option<char>, minicbor::decode::Error> {
 		// Unicode code points are 0≤N≤0x10FFFF.
-		#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-		let character = d.f64()? as u32;
+		let character = decode_u32_from_signal(d)?;
 		if character == 0 {
 			Ok(None)
 		} else {
@@ -118,8 +118,7 @@ impl<'buffer> KeySignal<'buffer> {
 		_: &mut Context,
 	) -> Result<Option<NonZeroU32>, minicbor::decode::Error> {
 		// Keycodes are small nonnegative numbers.
-		#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-		let keycode = d.f64()? as u32;
+		let keycode = decode_u32_from_signal(d)?;
 		Ok(NonZeroU32::new(keycode))
 	}
 

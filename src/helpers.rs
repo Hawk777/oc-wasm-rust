@@ -32,3 +32,19 @@ pub const fn max_of_usizes(x: &[usize]) -> usize {
 		0
 	}
 }
+
+/// Decodes a CBOR item that is a signal parameter that should be a `u16`.
+pub fn decode_u16_from_signal(d: &mut Decoder<'_>) -> Result<u16, minicbor::decode::Error> {
+	// The caller expects a u16, so it should fit.
+	#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+	let ret = d.f64()? as u16;
+	Ok(ret)
+}
+
+/// Decodes a CBOR item that is a signal parameter that should be a `u32`.
+pub fn decode_u32_from_signal(d: &mut Decoder<'_>) -> Result<u32, minicbor::decode::Error> {
+	// The caller expects a u32, so it should fit.
+	#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+	let ret = d.f64()? as u32;
+	Ok(ret)
+}

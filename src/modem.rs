@@ -2,7 +2,7 @@
 //! network cards.
 
 use crate::error::Error;
-use crate::helpers::max_usize;
+use crate::helpers::{decode_u16_from_signal, max_usize};
 use core::num::NonZeroU16;
 use minicbor::{Decode, Encode};
 use oc_wasm_futures::invoke::{component_method, Buffer};
@@ -686,10 +686,7 @@ impl<'buffer, Context, const N: usize> Decode<'buffer, Context> for Message<'buf
 			if parts_count <= N {
 				let receiver = Address::decode(d, context)?;
 				let sender = Address::decode(d, context)?;
-				// The port number is always a u16; it is only delivered as an f64 because
-				// OpenComputers is like that.
-				#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-				let port = d.f64()? as u16;
+				let port = decode_u16_from_signal(d)?;
 				let distance = d.f64()?;
 				let mut parts = [PacketPart::Null; N];
 				for i in &mut parts[..parts_count] {
