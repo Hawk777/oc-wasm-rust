@@ -35,16 +35,30 @@ pub const fn max_of_usizes(x: &[usize]) -> usize {
 
 /// Decodes a CBOR item that is a signal parameter that should be a `u16`.
 pub fn decode_u16_from_signal(d: &mut Decoder<'_>) -> Result<u16, minicbor::decode::Error> {
-	// The caller expects a u16, so it should fit.
-	#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-	let ret = d.f64()? as u16;
-	Ok(ret)
+	Ok(match d.datatype()? {
+		// OpenComputers 1.7 encodes u16s as f64s.
+		minicbor::data::Type::F64 => {
+			// The caller expects a u16, so it should fit.
+			#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+			let ret = d.f64()? as u16;
+			ret
+		}
+		// OpenComputers 1.8+ encodes u16s as u16s.
+		_ => d.u16()?,
+	})
 }
 
 /// Decodes a CBOR item that is a signal parameter that should be a `u32`.
 pub fn decode_u32_from_signal(d: &mut Decoder<'_>) -> Result<u32, minicbor::decode::Error> {
-	// The caller expects a u32, so it should fit.
-	#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-	let ret = d.f64()? as u32;
-	Ok(ret)
+	Ok(match d.datatype()? {
+		// OpenComputers 1.7 encodes u32s as f64s.
+		minicbor::data::Type::F64 => {
+			// The caller expects a u32, so it should fit.
+			#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+			let ret = d.f64()? as u32;
+			ret
+		}
+		// OpenComputers 1.8+ encodes u32s as u32s.
+		_ => d.u32()?,
+	})
 }

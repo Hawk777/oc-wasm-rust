@@ -22,21 +22,47 @@ pub const TYPE: &str = "modem";
 pub enum PacketPart<'a> {
 	/// The packet part is a null.
 	///
-	/// A null costs six bytes of space in the packet and is preserved end-to-end.
+	/// A null is preserved end-to-end. In OpenComputers 1.7, a null costs six bytes of space in
+	/// the packet. In OpenComputers 1.8+, it costs 3 bytes.
 	Null,
 
 	/// The packet part is a boolean.
 	///
-	/// A boolean costs six bytes of space in the packet and is preserved end-to-end.
+	/// A boolean is preserved end-to-end. In OpenComputers 1.7, a boolean costs six bytes of space
+	/// in the packet. In OpenComputers 1.8+, it costs 3 bytes.
 	Bool(bool),
 
 	/// The packet part is a 32-bit integer.
 	///
-	/// An `i32` costs six bytes of space in the packet. It is converted to an [`F64`](#F64) on the
-	/// receiver; therefore, this enumeration element can never appear in a received message.
-	/// However, it is still useful as it is cheaper to send an `i32` (six bytes) than an `f64`
-	/// (ten bytes).
+	/// In OpenComputers 1.7, an `i32` is converted to an [`F64`](#F64) on the receiver; therefore,
+	/// this enumeration element can never appear in a received message. It costs six bytes of
+	/// space in the packet and is therefore still useful on the sending end as it is cheaper to
+	/// send an `i32` than an `f64` (ten bytes).
+	///
+	/// In OpenComputers 1.8+, an `i32` is preserved end-to-end. It costs four bytes if its value
+	/// is between −32,768 and +32,767, and six bytes otherwise.
 	I32(i32),
+
+	/// The packet part is a 64-bit integer.
+	///
+	/// In OpenComputers 1.7, an `i64` is not permitted.
+	///
+	/// In OpenComputers 1.8+, an `i64` is converted to an [`I32`](#I32) and costs the same as that
+	/// type if its value fits within that type’s range; otherwise, it is preserved end-to-end and
+	/// costs ten bytes of space in the packet.
+	I64(i64),
+
+	/// The packet part is a 32-bit floating-point number.
+	///
+	/// In OpenComputers 1.7, an `f32` is converted to an [`F64`](#F64) on the receiver; therefore,
+	/// this enumeration element can never appear in a received message. It also costs the same as
+	/// an [`F64`](#F64), ten bytes.
+	///
+	/// In OpenComputers 1.8+, an `f32` is converted to an [`F64`](#F64) on the receiver;
+	/// therefore, this enumeration element can never appear in a received message. It costs six
+	/// bytes of space in the packet and is therefore still useful on the sending end as it is
+	/// cheaper to send an `f32` than an `f64` (ten bytes).
+	F32(f32),
 
 	/// The packet part is a 64-bit floating-point number.
 	///
@@ -85,7 +111,7 @@ impl From<u32> for PacketPart<'_> {
 	fn from(value: u32) -> Self {
 		match TryInto::<i32>::try_into(value) {
 			Ok(n) => Self::I32(n),
-			Err(_) => Self::F64(value.into()),
+			Err(_) => Self::I64(value.into()),
 		}
 	}
 }
@@ -108,9 +134,15 @@ impl From<i32> for PacketPart<'_> {
 	}
 }
 
+impl From<i64> for PacketPart<'_> {
+	fn from(value: i64) -> Self {
+		Self::I64(value)
+	}
+}
+
 impl From<f32> for PacketPart<'_> {
 	fn from(value: f32) -> Self {
-		Self::F64(value.into())
+		Self::F32(value)
 	}
 }
 
@@ -172,9 +204,21 @@ impl<'buffer, Context> Decode<'buffer, Context> for PacketPart<'buffer> {
 				d.undefined()?;
 				Ok(Self::Null)
 			}
-			// I32 can’t happen according to the OpenComputers source code; it is converted to F64
-			// before signal delivery.
-			Type::F16 | Type::F32 | Type::F64 => Ok(Self::F64(d.f64()?)),
+			Type::I8 | Type::I16 | Type::I32 | Type::U8 | Type::U16 => Ok(Self::I32(d.i32()?)),
+			Type::U32 => {
+				let u = d.u32()?;
+				if let Ok(i) = i32::try_from(u) {
+					Ok(Self::I32(i))
+				} else {
+					Ok(Self::I64(u.into()))
+				}
+			}
+			// Java doesn’t have a u64 type, but we get u64 whenever an i64 of nonnegative value is
+			// received. Since Java doesn’t have a u64 type, we know that the u64 we decode must
+			// fit into an i64.
+			Type::I64 | Type::U64 => Ok(Self::I64(d.i64()?)),
+			Type::F16 | Type::F32 => Ok(Self::F32(d.f32()?)),
+			Type::F64 => Ok(Self::F64(d.f64()?)),
 			Type::Bytes => Ok(Self::Bytes(d.bytes()?)),
 			Type::String => Ok(Self::Str(d.str()?)),
 			t => Err(minicbor::decode::Error::type_mismatch(t)),
@@ -196,6 +240,8 @@ impl<Context> Encode<Context> for PacketPart<'_> {
 			Self::Null => e.null(),
 			Self::Bool(v) => e.bool(v),
 			Self::I32(v) => e.i32(v),
+			Self::I64(v) => e.i64(v),
+			Self::F32(v) => e.f32(v),
 			Self::F64(v) => e.f64(v),
 			// SAFETY: We are sweeping things under the carpet a bit. In theory a consumer could
 			// create a PacketPart, then CBOR-encode it themselves, then drop the PacketPart and
