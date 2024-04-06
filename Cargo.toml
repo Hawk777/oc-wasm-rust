@@ -15,7 +15,7 @@ version = "^0.21"
 
 [dependencies.oc-wasm-safe]
 default-features = false
-version = "^0.5"
+version = "^0.12"
 
 [dependencies.ordered-float]
 default-features = false
