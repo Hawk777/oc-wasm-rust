@@ -16,15 +16,15 @@ version = "^0.21"
 
 [dependencies.oc-wasm-futures]
 default-features = false
-version = "^0.7"
+version = "^0.12"
 
 [dependencies.oc-wasm-helpers]
 default-features = false
-version = "^0.6"
+version = "^0.12"
 
 [dependencies.oc-wasm-safe]
 default-features = false
-version = "^0.5"
+version = "^0.12"
 
 [features]
 default = ["std"]
