@@ -1,0 +1,35 @@
+[package]
+name = "oc-wasm-futures"
+version = "0.12.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+description = "Futures that allow async/await to be used in OC-Wasm for a more ergonomic experience"
+repository = "https://gitlab.com/Hawk777/oc-wasm-futures"
+license = "GPL-3.0-only"
+keywords = ["minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
+[dependencies.minicbor]
+default-features = false
+version = "^0.21"
+
+[dependencies.oc-wasm-safe]
+default-features = false
+version = "^0.12"
+
+[dependencies.ordered-float]
+default-features = false
+version = "^4"
+
+[features]
+default = ["alloc", "proper-waker"]
+# Enable this if you want to use a Vec<u8> as your scratch buffer rather than
+# using a fixed-size slice or providing your own customer Buffer
+# implementation.
+alloc = ["minicbor/alloc"]
+# Disable this if your executor passes a dummy waker (that doesn’t do anything)
+# and always polls every task to get a smaller sleep module.
+proper-waker = ["alloc"]
+
+[package.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"

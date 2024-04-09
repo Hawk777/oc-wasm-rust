@@ -1,0 +1,33 @@
+[package]
+name = "oc-wasm-safe"
+version = "0.12.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+description = "Safe but low-level wrappers around the OC-Wasm system call interface"
+repository = "https://gitlab.com/Hawk777/oc-wasm-safe"
+license = "GPL-3.0-only"
+keywords = ["minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
+[dependencies.minicbor]
+default-features = false
+version = "^0.21"
+
+[dependencies.oc-wasm-sys]
+version = "^0.12"
+
+[dependencies.ordered-float]
+default-features = false
+version = "^4"
+
+[dependencies.uuid]
+default-features = false
+version = "^1"
+
+[features]
+default = ["panic", "std"]
+panic = []
+std = []
+
+[package.metadata.docs.rs]
+default-target = "wasm32-unknown-unknown"
