@@ -9,15 +9,10 @@ license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
 
-[dependencies.cassette]
-version = "^0.2"
-
-[dependencies.oc-wasm-futures]
-default-features = false
-version = "^0.12"
-
-[dependencies.sync-unsafe-cell]
-version = "^0.1"
+[dependencies]
+cassette = { version = "^0.2" }
+oc-wasm-futures = { workspace = true }
+sync-unsafe-cell = { version = "^0.1" }
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

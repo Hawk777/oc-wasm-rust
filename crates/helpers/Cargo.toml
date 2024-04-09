@@ -9,18 +9,10 @@ license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
 
-[dependencies.minicbor]
-default-features = false
-features = ["derive"]
-version = "^0.21"
-
-[dependencies.oc-wasm-futures]
-default-features = false
-version = "^0.12"
-
-[dependencies.oc-wasm-safe]
-default-features = false
-version = "^0.12"
+[dependencies]
+minicbor = { features = ["derive"], workspace = true }
+oc-wasm-futures = { workspace = true }
+oc-wasm-safe = { workspace = true }
 
 [features]
 default = ["alloc"]

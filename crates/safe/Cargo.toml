@@ -9,20 +9,11 @@ license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
 
-[dependencies.minicbor]
-default-features = false
-version = "^0.21"
-
-[dependencies.oc-wasm-sys]
-version = "^0.12"
-
-[dependencies.ordered-float]
-default-features = false
-version = "^4"
-
-[dependencies.uuid]
-default-features = false
-version = "^1"
+[dependencies]
+minicbor = { workspace = true }
+oc-wasm-sys = { workspace = true }
+ordered-float = { workspace = true }
+uuid = { default-features = false, version = "^1" }
 
 [features]
 default = ["panic", "std"]

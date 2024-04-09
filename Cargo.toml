@@ -2,6 +2,18 @@
 resolver = "2"
 members = ["crates/*"]
 
+[workspace.dependencies]
+minicbor = { default-features = false, version = "^0.21" }
+oc-wasm-applied-energistics = { default-features = false, path = "crates/applied-energistics", version = "^0.12" }
+oc-wasm-cassette = { default-features = false, path = "crates/cassette", version = "^0.12" }
+oc-wasm-futures = { default-features = false, path = "crates/futures", version = "^0.12" }
+oc-wasm-helpers = { default-features = false, path = "crates/helpers", version = "^0.12" }
+oc-wasm-immersive = { default-features = false, path = "crates/immersive", version = "^0.12" }
+oc-wasm-opencomputers = { default-features = false, path = "crates/opencomputers", version = "^0.12" }
+oc-wasm-safe = { default-features = false, path = "crates/safe", version = "^0.12" }
+oc-wasm-sys = { default-features = false, path = "crates/sys", version = "^0.12" }
+ordered-float = { default-features = false, version = "^4" }
+
 [profile.dev]
 panic = "abort"
 

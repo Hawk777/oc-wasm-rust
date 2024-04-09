@@ -9,9 +9,8 @@ license = "GPL-3.0-only"
 keywords = ["minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
 
-[dependencies.ordered-float]
-default-features = false
-version = "^4"
+[dependencies]
+ordered-float = { workspace = true }
 
 [package.metadata.docs.rs]
 default-target = "wasm32-unknown-unknown"

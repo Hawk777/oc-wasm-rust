@@ -9,26 +9,12 @@ license = "GPL-3.0-only"
 keywords = ["immersive", "minecraft", "oc-wasm", "opencomputers"]
 categories = ["games"]
 
-[dependencies.bounded-integer]
-features = ["macro"]
-version = "^0.5"
-
-[dependencies.minicbor]
-default-features = false
-features = ["derive"]
-version = "^0.21"
-
-[dependencies.oc-wasm-futures]
-default-features = false
-version = "^0.12"
-
-[dependencies.oc-wasm-helpers]
-default-features = false
-version = "^0.12"
-
-[dependencies.oc-wasm-safe]
-default-features = false
-version = "^0.12"
+[dependencies]
+bounded-integer = { features = ["macro"], version = "^0.5" }
+minicbor = { workspace = true }
+oc-wasm-futures = { workspace = true }
+oc-wasm-helpers = { workspace = true }
+oc-wasm-safe = { workspace = true }
 
 [features]
 default = ["std"]
