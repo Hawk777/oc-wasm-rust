@@ -1,13 +1,13 @@
 [package]
 name = "oc-wasm-applied-energistics"
-version = "0.12.0"
-authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 description = "High-level APIs for Applied Energistics"
-repository = "https://gitlab.com/Hawk777/oc-wasm-applied-energistics"
-license = "GPL-3.0-only"
+repository = { workspace = true }
+license = { workspace = true }
 keywords = ["applied", "energistics", "minecraft", "oc-wasm", "opencomputers"]
-categories = ["games"]
+categories = { workspace = true }
 
 [dependencies]
 minicbor = { workspace = true }

@@ -1,13 +1,13 @@
 [package]
 name = "oc-wasm-immersive"
-version = "0.12.0"
-authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 description = "High-level APIs for the Immersive family of machines"
-repository = "https://gitlab.com/Hawk777/oc-wasm-immersive"
-license = "GPL-3.0-only"
+repository = { workspace = true }
+license = { workspace = true }
 keywords = ["immersive", "minecraft", "oc-wasm", "opencomputers"]
-categories = ["games"]
+categories = { workspace = true }
 
 [dependencies]
 bounded-integer = { features = ["macro"], version = "^0.5" }

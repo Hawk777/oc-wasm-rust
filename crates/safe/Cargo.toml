@@ -1,13 +1,13 @@
 [package]
 name = "oc-wasm-safe"
-version = "0.12.0"
-authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 description = "Safe but low-level wrappers around the OC-Wasm system call interface"
-repository = "https://gitlab.com/Hawk777/oc-wasm-safe"
-license = "GPL-3.0-only"
-keywords = ["minecraft", "oc-wasm", "opencomputers"]
-categories = ["games"]
+repository = { workspace = true }
+license = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
 
 [dependencies]
 minicbor = { workspace = true }

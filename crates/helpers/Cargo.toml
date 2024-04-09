@@ -1,13 +1,13 @@
 [package]
 name = "oc-wasm-helpers"
-version = "0.12.0"
-authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 description = "Helpers used by multiple OC-Wasm high-level APIs"
-repository = "https://gitlab.com/Hawk777/oc-wasm-helpers"
-license = "GPL-3.0-only"
-keywords = ["minecraft", "oc-wasm", "opencomputers"]
-categories = ["games"]
+repository = { workspace = true }
+license = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
 
 [dependencies]
 minicbor = { features = ["derive"], workspace = true }

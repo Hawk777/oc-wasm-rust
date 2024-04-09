@@ -2,6 +2,15 @@
 resolver = "2"
 members = ["crates/*"]
 
+[workspace.package]
+version = "0.12.0"
+authors = ["Christopher Head <chead@chead.ca>"]
+edition = "2021"
+repository = "https://gitlab.com/Hawk777/oc-wasm-rust"
+license = "GPL-3.0-only"
+keywords = ["minecraft", "oc-wasm", "opencomputers"]
+categories = ["games"]
+
 [workspace.dependencies]
 minicbor = { default-features = false, version = "^0.21" }
 oc-wasm-applied-energistics = { default-features = false, path = "crates/applied-energistics", version = "^0.12" }

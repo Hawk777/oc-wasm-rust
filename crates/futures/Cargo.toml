@@ -1,13 +1,13 @@
 [package]
 name = "oc-wasm-futures"
-version = "0.12.0"
-authors = ["Christopher Head <chead@chead.ca>"]
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 description = "Futures that allow async/await to be used in OC-Wasm for a more ergonomic experience"
-repository = "https://gitlab.com/Hawk777/oc-wasm-futures"
-license = "GPL-3.0-only"
-keywords = ["minecraft", "oc-wasm", "opencomputers"]
-categories = ["games"]
+repository = { workspace = true }
+license = { workspace = true }
+keywords = { workspace = true }
+categories = { workspace = true }
 
 [dependencies]
 minicbor = { workspace = true }
