@@ -2,6 +2,12 @@ Lint:
   stage: test
   image:
     name: registry.gitlab.com/hawk777/oc-wasm-ci-images/rust:6b6902e3b5880ae33b65ed516e410dc3e846f80e
+  variables:
+    CARGO_HOME: gitlab-ci-cargo-home
+  cache:
+    paths:
+      - gitlab-ci-cargo-home/registry/cache
+      - gitlab-ci-cargo-home/registry/index
   script:
     - cargo version
     - cargo clippy
