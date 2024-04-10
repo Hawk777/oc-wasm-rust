@@ -167,8 +167,6 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 		Ok(ret.0)
 	}
 
-	// TODO store
-
 	/// Returns information about all stored fluids in the network.
 	///
 	/// # Errors

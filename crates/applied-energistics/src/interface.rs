@@ -96,8 +96,6 @@ impl<'invoker, 'buffer, B: Buffer> LockedBlock<'invoker, 'buffer, B> {
 			}
 		}
 	}
-
-	// TODO setInterfaceConfiguration
 }
 
 /// An ME Interface part.
@@ -192,6 +190,4 @@ impl<'invoker, 'buffer, B: Buffer> LockedPart<'invoker, 'buffer, B> {
 			}
 		}
 	}
-
-	// TODO setInterfaceConfiguration
 }
