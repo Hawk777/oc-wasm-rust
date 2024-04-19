@@ -59,7 +59,7 @@ impl<'buffer> From<OptionFluid<'buffer>> for Option<Fluid<'buffer>> {
 	}
 }
 
-/// A map-decoding builder for an [`OptionFluid`](OptionFluid).
+/// A map-decoding builder for an [`OptionFluid`].
 #[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OptionFluidBuilder<'buffer> {
 	/// The internal (Minecraft system) name of the item.
@@ -168,7 +168,7 @@ impl<'buffer, Context> Decode<'buffer, Context> for Tank<'buffer> {
 	}
 }
 
-/// A map-decoding builder for a [`Tank`](Tank).
+/// A map-decoding builder for a [`Tank`].
 #[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TankBuilder<'buffer> {
 	/// The fluid.

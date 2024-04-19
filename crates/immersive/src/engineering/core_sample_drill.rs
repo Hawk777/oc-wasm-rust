@@ -45,11 +45,10 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// A core sample drill component on which methods can be invoked.
 ///
-/// This type combines a core sample drill address, an [`Invoker`](Invoker) that can be used to
-/// make method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of
-/// this type can be created by calling [`Drill::lock`](Drill::lock), and it can be dropped to
-/// return the borrow of the invoker and buffer to the caller so they can be reused for other
-/// purposes.
+/// This type combines a core sample drill address, an [`Invoker`] that can be used to make method
+/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
+/// can be created by calling [`Drill::lock`], and it can be dropped to return the borrow of the
+/// invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.

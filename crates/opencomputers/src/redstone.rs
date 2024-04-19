@@ -50,11 +50,10 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// A redstone component on which methods can be invoked.
 ///
-/// This type combines a redstone block or card address, an [`Invoker`](Invoker) that can be used
-/// to make method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value
-/// of this type can be created by calling [`Redstone::lock`](Redstone::lock), and it can be
-/// dropped to return the borrow of the invoker and buffer to the caller so they can be reused for
-/// other purposes.
+/// This type combines a redstone block or card address, an [`Invoker`] that can be used to make
+/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
+/// type can be created by calling [`Redstone::lock`], and it can be dropped to return the borrow
+/// of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.
@@ -502,13 +501,13 @@ impl<'invoker, 'buffer, B: Buffer> Locked<'invoker, 'buffer, B> {
 
 /// An array that is CBOR-encoded as a map keyed by array index, rather than a CBOR array.
 ///
-/// To be decoded, the element type must implement [`Copy`](Copy), [`Decode`](minicbor::Decode) and
-/// [`Default`](Default), and any elements not included in the CBOR-encoded map will be returned at
-/// their default values.
+/// To be decoded, the element type must implement [`Copy`], [`Decode`](minicbor::Decode) and
+/// [`Default`], and any elements not included in the CBOR-encoded map will be returned at their
+/// default values.
 ///
-/// To be encoded, the element type must be an [`Option`](Option) and the type contained therein
-/// must implement [`Encode`](minicbor::Encode). `None` values are omitted from the map entirely,
-/// while `Some` values are encoded as their contents, keyed by array position.
+/// To be encoded, the element type must be an [`Option`] and the type contained therein must
+/// implement [`Encode`](minicbor::Encode). `None` values are omitted from the map entirely, while
+/// `Some` values are encoded as their contents, keyed by array position.
 #[derive(Clone, Copy)]
 struct ArrayAsMap<T, const LENGTH: usize>(pub [T; LENGTH]);
 

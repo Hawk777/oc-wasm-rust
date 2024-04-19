@@ -4,27 +4,25 @@
 //! Some of the APIs in this module are independent and can be used standalone. Invoking methods,
 //! however, is more complicated, and must be done as follows:
 //!
-//! 1. Call [`Invoker::take`](Invoker::take) if not already done (this can only be done once at
-//!    program startup) to obtain an [`Invoker`](Invoker).
-//! 2. Call one of the methods on the [`Invoker`](Invoker) to start the component call. On success,
-//!    this returns an [`InvokeResult`](InvokeResult) indicating whether the call is complete or
-//!    not along with a [`MethodCall`](MethodCall) to use to fetch the result.
+//! 1. Call [`Invoker::take`] if not already done (this can only be done once at program startup)
+//!    to obtain an [`Invoker`].
+//! 2. Call one of the methods on the [`Invoker`] to start the component call. On success, this
+//!    returns an [`InvokeResult`] indicating whether the call is complete or not along with a
+//!    [`MethodCall`] to use to fetch the result.
 //! 3. If necessary, wait until the call is complete by returning from `run`.
-//! 4. If necessary, call [`MethodCall::end_length`](MethodCall::end_length) to allocate a
-//!    sufficient buffer to hold the result.
-//! 5. Call one of the methods on [`MethodCall`](MethodCall) to fetch the result, which both fills
-//!    the provided buffer and also returns an [`InvokeEndResult`](InvokeEndResult).
+//! 4. If necessary, call [`MethodCall::end_length`] to allocate a sufficient buffer to hold the
+//!    result.
+//! 5. Call one of the methods on [`MethodCall`] to fetch the result, which both fills the provided
+//!    buffer and also returns an [`InvokeEndResult`].
 //! 6. If [`Done`](InvokeEndResult::Done) is returned with an `Ok` result, examine the result in
 //!    the buffer.
 //! 7. If [`Done`](InvokeEndResult::Done) is returned with an `Err` result, the
-//!    [`MethodCallError`](MethodCallError) can be examined to determine the reason for the
-//!    failure, including detailed exception information in the form of a
-//!    [`LastException`](LastException) object if applicable.
-//! 8. Another method call can only be started once the [`InvokeResult`](InvokeResult),
-//!    [`MethodCall`](MethodCall), [`InvokeEndResult`](InvokeEndResult), and
-//!    [`LastException`](LastException) have all been dropped. This is enforced by means of
-//!    lifetime bindings between those types and the [`Invoker`](Invoker), preventing the latter
-//!    from being reused too early.
+//!    [`MethodCallError`] can be examined to determine the reason for the failure, including
+//!    detailed exception information in the form of a [`LastException`] object if applicable.
+//! 8. Another method call can only be started once the [`InvokeResult`], [`MethodCall`],
+//!    [`InvokeEndResult`], and [`LastException`] have all been dropped. This is enforced by means
+//!    of lifetime bindings between those types and the [`Invoker`], preventing the latter from
+//!    being reused too early.
 
 use super::descriptor::AsDescriptor;
 use super::error::{Error, Result};
@@ -1085,13 +1083,13 @@ impl std::error::Error for MethodCallError<'_> {}
 #[derive(Debug, Eq, PartialEq)]
 pub enum InvokeEndLengthResult<'invoker> {
 	/// The method call is complete. If the method call completed successfully, the `Result` value
-	/// contains both the length of the call result, in bytes, and the [`MethodCall`](MethodCall)
-	/// value that can be used to fetch the result if desired. If the method call failed, the
-	/// `Result` value contains the error.
+	/// contains both the length of the call result, in bytes, and the [`MethodCall`] value that
+	/// can be used to fetch the result if desired. If the method call failed, the `Result` value
+	/// contains the error.
 	Done(core::result::Result<(usize, MethodCall<'invoker>), MethodCallError<'invoker>>),
 
-	/// The method call is not finished yet. The [`MethodCall`](MethodCall) value is returned so
-	/// the caller can continue to monitor progress.
+	/// The method call is not finished yet. The [`MethodCall`] value is returned so the caller can
+	/// continue to monitor progress.
 	Pending(MethodCall<'invoker>),
 }
 
@@ -1107,11 +1105,11 @@ pub enum InvokeEndResult<'invoker> {
 	Done(core::result::Result<usize, MethodCallError<'invoker>>),
 
 	/// The method call is complete but the provided buffer was too short to hold the result. The
-	/// [`MethodCall`](MethodCall) value is returned so the caller can retry with a larger buffer.
+	/// [`MethodCall`] value is returned so the caller can retry with a larger buffer.
 	BufferTooShort(MethodCall<'invoker>),
 
-	/// The method call is not finished yet. The [`MethodCall`](MethodCall) value is returned so
-	/// the caller can continue to monitor progress.
+	/// The method call is not finished yet. The [`MethodCall`] value is returned so the caller can
+	/// continue to monitor progress.
 	Pending(MethodCall<'invoker>),
 }
 
@@ -1127,8 +1125,7 @@ impl<'invoker> InvokeEndResult<'invoker> {
 	/// * [`QueueEmpty`](MethodCallError::QueueEmpty) is returned if the result was actually
 	///   `QueueEmpty`.
 	///
-	/// In case of any error, because the [`MethodCall`](MethodCall) is consumed, the method call
-	/// is cancelled.
+	/// In case of any error, because the [`MethodCall`] is consumed, the method call is cancelled.
 	#[must_use = "This function is only useful for its return value"]
 	pub fn expect_done(self) -> core::result::Result<usize, MethodCallError<'invoker>> {
 		match self {

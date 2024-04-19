@@ -46,10 +46,10 @@ impl<'a, B: 'a + Buffer> Lockable<'a, 'a, B> for Screen {
 
 /// A screen component on which methods can be invoked.
 ///
-/// This type combines a screen address, an [`Invoker`](Invoker) that can be used to make method
-/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
-/// can be created by calling [`Screen::lock`](Screen::lock), and it can be dropped to return the
-/// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
+/// This type combines a screen address, an [`Invoker`] that can be used to make method calls, and
+/// a scratch buffer used to perform CBOR encoding and decoding. A value of this type can be
+/// created by calling [`Screen::lock`], and it can be dropped to return the borrow of the invoker
+/// and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'a` lifetime is the lifetime of the invoker and the buffer. The `B` type is the type of
 /// scratch buffer to use.

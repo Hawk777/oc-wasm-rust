@@ -40,8 +40,8 @@ pub trait AsRaw {
 
 /// A value that can be borrowed as an opaque value descriptor.
 ///
-/// A value implementing this trait is able to produce a [`Borrowed`](Borrowed) value referring to
-/// a descriptor.
+/// A value implementing this trait is able to produce a [`Borrowed`] value referring to a
+/// descriptor.
 #[allow(clippy::module_name_repetitions)] // This is the best name I could come up with.
 pub trait AsDescriptor {
 	/// Borrows the descriptor.
@@ -51,8 +51,8 @@ pub trait AsDescriptor {
 
 /// A value that can be converted into an opaque value descriptor.
 ///
-/// A value implementing this trait is able to produce an [`Owned`](Owned) value referring to a
-/// descriptor by consuming itself.
+/// A value implementing this trait is able to produce an [`Owned`] value referring to a descriptor
+/// by consuming itself.
 #[allow(clippy::module_name_repetitions)] // This is the best name I could come up with.
 pub trait IntoDescriptor {
 	/// Converts to the descriptor.
@@ -167,7 +167,7 @@ impl<Context> Encode<Context> for Owned {
 /// A value of this type encapsulates an opaque value descriptor. Copying or cloning it produces a
 /// new object containing the same descriptor. Dropping it does nothing. CBOR-encoding it yields an
 /// integer with the Identifier tag. While a value of this type exists, lifetime rules prevent the
-/// modification or dropping of the [`Owned`](Owned) value from which it borrowed its descriptor.
+/// modification or dropping of the [`Owned`] value from which it borrowed its descriptor.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Borrowed<'a>(NonZeroU32, PhantomData<&'a NonZeroU32>);
 
@@ -213,13 +213,13 @@ impl<Context> Encode<Context> for Borrowed<'_> {
 /// does nothing; this may cause a resource leak, but resource leaks are not considered unsafe
 /// Rust, and under the circumstances, closing the descriptor could be unsafe (see the safety note
 /// on [`into_owned`](Decoded::into_owned) for why). The intended use of this type is to
-/// immediately call [`into_owned`](Decoded::into_owned) to convert the value into an
-/// [`Owned`](Owned) instead.
+/// immediately call [`into_owned`](Decoded::into_owned) to convert the value into an [`Owned`]
+/// instead.
 #[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Decoded(NonZeroU32);
 
 impl Decoded {
-	/// Converts a `Decoded` descriptor into an [`Owned`](Owned) descriptor.
+	/// Converts a `Decoded` descriptor into an [`Owned`] descriptor.
 	///
 	/// # Safety
 	/// The caller must ensure that the `Decoded` descriptor is the only reference to the
@@ -230,13 +230,13 @@ impl Decoded {
 	///
 	/// The reason why this method is unsafe is that a caller could potentially craft an arbitrary
 	/// CBOR sequence in a byte buffer, then decode it. If such a decoding operation were to return
-	/// an [`Owned`](Owned) directly, this would be unsound, as the caller could decode a second
-	/// [`Owned`](Owned) referring to the same descriptor as an existing [`Owned`](Owned) or an
-	/// [`Owned`](Owned) referring to a closed descriptor. Instead, CBOR decoding (which is itself
-	/// safe) can only create a `Decoded`, which does not claim exclusive ownership (or even
-	/// validity) of the contained descriptor but also cannot actually be used as a descriptor; the
-	/// caller is forced to promise those properties in order to convert to the actually useful
-	/// [`Owned`](Owned) type via this `unsafe` method.
+	/// an [`Owned`] directly, this would be unsound, as the caller could decode a second [`Owned`]
+	/// referring to the same descriptor as an existing [`Owned`] or an [`Owned`] referring to a
+	/// closed descriptor. Instead, CBOR decoding (which is itself safe) can only create a
+	/// `Decoded`, which does not claim exclusive ownership (or even validity) of the contained
+	/// descriptor but also cannot actually be used as a descriptor; the caller is forced to
+	/// promise those properties in order to convert to the actually useful [`Owned`] type via this
+	/// `unsafe` method.
 	#[allow(clippy::must_use_candidate)] // If caller doesn’t want the descriptor, they can do this and immediately drop.
 	pub unsafe fn into_owned(self) -> Owned {
 		Owned(self.0)

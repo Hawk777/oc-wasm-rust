@@ -29,11 +29,11 @@ pub trait Buffer: AsMut<[u8]> + minicbor::encode::Write {
 	/// Tries to end a component call invocation into the buffer.
 	///
 	/// If the buffer is of insufficient size and is resizable, the implementation should resize
-	/// the buffer and try again. In any other case, it should return the
-	/// [`InvokeEndResult`](InvokeEndResult) directly.
+	/// the buffer and try again. In any other case, it should return the [`InvokeEndResult`]
+	/// directly.
 	///
 	/// # Errors
-	/// This function can return any error returned by [`MethodCall::end`](MethodCall::end).
+	/// This function can return any error returned by [`MethodCall::end`].
 	fn end_into<'invoker>(&mut self, call: MethodCall<'invoker>) -> InvokeEndResult<'invoker>;
 }
 
@@ -105,8 +105,8 @@ impl Buffer for alloc::vec::Vec<u8> {
 /// A future that waits for the method call to complete, then returns the length, in bytes, of the
 /// result.
 ///
-/// On success, the length and the [`MethodCall`](MethodCall) are returned, allowing the
-/// [`MethodCall`](MethodCall) to be reused to fetch the actual bytes.
+/// On success, the length and the [`MethodCall`] are returned, allowing the [`MethodCall`] to be
+/// reused to fetch the actual bytes.
 ///
 /// # Errors
 /// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call failed
@@ -139,8 +139,8 @@ pub enum EndResult<'invoker> {
 	/// The call returned a result. The number of bytes written into the buffer is returned.
 	Done(usize),
 
-	/// The call indicated that the buffer is too short. The [`MethodCall`](MethodCall) is returned
-	/// so the operation can be retried with a larger buffer.
+	/// The call indicated that the buffer is too short. The [`MethodCall`] is returned so the
+	/// operation can be retried with a larger buffer.
 	BufferTooShort(MethodCall<'invoker>),
 }
 
@@ -183,8 +183,8 @@ impl<'invoker, 'buffer, B: Buffer> Future for EndIntoBuffer<'invoker, 'buffer, B
 pub trait MethodCallExt<'invoker> {
 	/// Waits for the method call to complete, then returns the length, in bytes, of the result.
 	///
-	/// On success, the length and the [`MethodCall`](MethodCall) are returned, allowing the
-	/// [`MethodCall`](MethodCall) to be reused to fetch the actual bytes.
+	/// On success, the length and the [`MethodCall`] are returned, allowing the [`MethodCall`] to
+	/// be reused to fetch the actual bytes.
 	///
 	/// # Errors
 	/// * [`NoSuchComponent`](MethodCallError::NoSuchComponent) is returned if the method call

@@ -51,10 +51,10 @@ impl<'a, B: 'a + Buffer> Lockable<'a, 'a, B> for Gpu {
 
 /// A GPU component on which methods can be invoked.
 ///
-/// This type combines a GPU address, an [`Invoker`](Invoker) that can be used to make method
-/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
-/// can be created by calling [`Gpu::lock`](Gpu::lock), and it can be dropped to return the borrow
-/// of the invoker and buffer to the caller so they can be reused for other purposes.
+/// This type combines a GPU address, an [`Invoker`] that can be used to make method calls, and a
+/// scratch buffer used to perform CBOR encoding and decoding. A value of this type can be created
+/// by calling [`Gpu::lock`], and it can be dropped to return the borrow of the invoker and buffer
+/// to the caller so they can be reused for other purposes.
 ///
 /// The `'a` lifetime is the lifetime of the invoker and the buffer. The `B` type is the type of
 /// scratch buffer to use.
@@ -622,12 +622,10 @@ impl<'a, B: Buffer> Locked<'a, B> {
 		Ok(ret.0)
 	}
 
-	/// Given a “raw” `Result` whose
-	/// [`MethodCallError::BadParameters`](MethodCallError::BadParameters) needs to map to one
-	/// specific [`Error`](Error) value, with all others except
-	/// [`MethodCallError::TooManyDescriptors`](MethodCallError::TooManyDescriptors) mapping to
-	/// [`Error::BadComponent`](Error::BadComponent), returns the “cooked” `Result` with the errors
-	/// mapped accordingly.
+	/// Given a “raw” `Result` whose [`MethodCallError::BadParameters`] needs to map to one
+	/// specific [`Error`] value, with all others except [`MethodCallError::TooManyDescriptors`]
+	/// mapping to [`Error::BadComponent`], returns the “cooked” `Result` with the errors mapped
+	/// accordingly.
 	fn map_bad_parameters<T>(
 		x: Result<T, MethodCallError<'_>>,
 		bad_parameters: Error,
@@ -640,9 +638,8 @@ impl<'a, B: Buffer> Locked<'a, B> {
 	}
 
 	/// Given a `NullAndStringOr` from a function whose only expected null-and-string return is “no
-	/// screen”, maps that error to [`Error::BadScreen`](Error::BadScreen), all other
-	/// null-and-string errors to [`Error::BadComponent`](Error::BadComponent), and returns any
-	/// success object unmodified.
+	/// screen”, maps that error to [`Error::BadScreen`], all other null-and-string errors to
+	/// [`Error::BadComponent`], and returns any success object unmodified.
 	fn map_no_screen<T>(x: NullAndStringOr<'_, T>) -> Result<T, Error> {
 		match x {
 			NullAndStringOr::Ok(x) => Ok(x),

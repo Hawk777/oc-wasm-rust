@@ -76,16 +76,15 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// An inventory controller component on which methods can be invoked.
 ///
-/// This type combines an inventory controller address, an [`Invoker`](Invoker) that can be used to
-/// make method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of
-/// this type can be created by calling [`Controller::lock`](Controller::lock), and it can be
-/// dropped to return the borrow of the invoker and buffer to the caller so they can be reused for
-/// other purposes.
+/// This type combines an inventory controller address, an [`Invoker`] that can be used to make
+/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
+/// type can be created by calling [`Controller::lock`], and it can be dropped to return the borrow
+/// of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// Where a function is declared as taking [`impl Side`](Side), an
 /// [`AbsoluteSide`](super::common::AbsoluteSide) must be passed if operating on a transposer or an
-/// upgrade module installed in an adapter, while a [`RelativeSide`](super::common::RelativeSide)
-/// must be passed if operating on an upgrade module installed in a robot or drone.
+/// upgrade module installed in an adapter, while a [`RelativeSide`] must be passed if operating on
+/// an upgrade module installed in a robot or drone.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.
@@ -1200,11 +1199,10 @@ impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer
 
 /// A snapshot of the contents of an inventory on which methods can be invoked.
 ///
-/// This type combines an inventory snapshot, an [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`Snapshot::lock`](Lockable::lock), and it can be dropped to
-/// return the borrow of the invoker and buffer to the caller so they can be reused for other
-/// purposes.
+/// This type combines an inventory snapshot, an [`Invoker`] that can be used to make method calls,
+/// and a scratch buffer used to perform CBOR encoding and decoding. A value of this type can be
+/// created by calling [`Snapshot::lock`](Lockable::lock), and it can be dropped to return the
+/// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'snapshot` lifetime is the lifetime of the original snapshot. The `'invoker` lifetime is
 /// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type

@@ -48,11 +48,10 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// A network control component on which methods can be invoked.
 ///
-/// This type combines a network control component address, an [`Invoker`](Invoker) that can be
-/// used to make method calls, and a scratch buffer used to perform CBOR encoding and decoding. A
-/// value of this type can be created by calling [`NetworkControl::lock`](NetworkControl::lock),
-/// and it can be dropped to return the borrow of the invoker and buffer to the caller so they can
-/// be reused for other purposes.
+/// This type combines a network control component address, an [`Invoker`] that can be used to make
+/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
+/// type can be created by calling [`NetworkControl::lock`], and it can be dropped to return the
+/// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.
@@ -295,7 +294,7 @@ impl<'buffer, Context> Decode<'buffer, Context> for Cpu<'buffer> {
 	}
 }
 
-/// A map-decoding builder for a [Cpu](Cpu).
+/// A map-decoding builder for a [Cpu].
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CpuBuilder<'buffer> {
 	name: Option<&'buffer str>,
@@ -457,7 +456,7 @@ impl<'buffer, Context> Decode<'buffer, Context> for ItemStackInNetwork<'buffer> 
 	}
 }
 
-/// A builder for [`ItemStackInNetwork`](ItemStackInNetwork).
+/// A builder for [`ItemStackInNetwork`].
 #[derive(Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct ItemStackInNetworkBuilder<'buffer> {
 	/// The item stack.
@@ -518,14 +517,14 @@ impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer
 
 /// A crafting recipe on which methods can be invoked.
 ///
-/// This type combines a crafting recipe, an [`Invoker`](Invoker) that can be used to make method
-/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
-/// can be created by calling [`Craftable::lock`](Lockable::lock), and it can be dropped to return
-/// the borrow of the invoker and buffer to the caller so they can be reused for other purposes.
+/// This type combines a crafting recipe, an [`Invoker`] that can be used to make method calls, and
+/// a scratch buffer used to perform CBOR encoding and decoding. A value of this type can be
+/// created by calling [`Craftable::lock`](Lockable::lock), and it can be dropped to return the
+/// borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
-/// The `'handle` lifetime is the lifetime of the original [`Craftable`](Craftable). The `'invoker`
-/// lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer.
-/// The `B` type is the type of scratch buffer to use.
+/// The `'handle` lifetime is the lifetime of the original [`Craftable`]. The `'invoker` lifetime
+/// is the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B`
+/// type is the type of scratch buffer to use.
 pub struct LockedCraftable<'handle, 'invoker, 'buffer, B: Buffer> {
 	/// The descriptor.
 	descriptor: descriptor::Borrowed<'handle>,
@@ -594,9 +593,8 @@ impl<'handle, 'invoker, 'buffer, B: Buffer> LockedCraftable<'handle, 'invoker, '
 	///
 	/// # Warning
 	/// This method does *not* return [`MissingResources`](Error::MissingResources). Instead, if
-	/// resources are missing, this method will return a valid
-	/// [`CraftingOperation`](CraftingOperation), and method calls on that object will return
-	/// [`MissingResources`](Error::MissingResources).
+	/// resources are missing, this method will return a valid [`CraftingOperation`], and method
+	/// calls on that object will return [`MissingResources`](Error::MissingResources).
 	///
 	/// # Errors
 	/// * [`BadComponent`](Error::BadComponent)
@@ -657,16 +655,14 @@ impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer
 
 /// An ongoing crafting operation on which methods can be invoked.
 ///
-/// This type combines a crafting operation, an [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`CraftingOperation::lock`](Lockable::lock), and it can be
-/// dropped to return the borrow of the invoker and buffer to the caller so they can be reused for
-/// other purposes.
+/// This type combines a crafting operation, an [`Invoker`] that can be used to make method calls,
+/// and a scratch buffer used to perform CBOR encoding and decoding. A value of this type can be
+/// created by calling [`CraftingOperation::lock`](Lockable::lock), and it can be dropped to return
+/// the borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
-/// The `'handle` lifetime is the lifetime of the original
-/// [`CraftingOperation`](CraftingOperation). The `'invoker` lifetime is the lifetime of the
-/// invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type is the type of
-/// scratch buffer to use.
+/// The `'handle` lifetime is the lifetime of the original [`CraftingOperation`]. The `'invoker`
+/// lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer.
+/// The `B` type is the type of scratch buffer to use.
 pub struct LockedCraftingOperation<'handle, 'invoker, 'buffer, B: Buffer> {
 	/// The descriptor.
 	descriptor: descriptor::Borrowed<'handle>,

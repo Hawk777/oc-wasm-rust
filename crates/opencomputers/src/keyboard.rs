@@ -11,9 +11,9 @@ use oc_wasm_safe::Address;
 /// Information about a key press or release event, excluding the name of the player who pressed or
 /// released the key.
 ///
-/// This structure, unlike [`KeySignal`](KeySignal), is fully owned. Thus, a typical application
-/// which does not care about the player name can convert a [`KeySignal`](KeySignal) into a
-/// `BasicKeySignal` in order to regain use of the decode buffer.
+/// This structure, unlike [`KeySignal`], is fully owned. Thus, a typical application which does
+/// not care about the player name can convert a [`KeySignal`] into a `BasicKeySignal` in order to
+/// regain use of the decode buffer.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct BasicKeySignal {
 	/// The address of the keyboard component.

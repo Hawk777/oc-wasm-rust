@@ -66,7 +66,7 @@ impl<'buffer> From<OptionItemStack<'buffer>> for Option<ItemStack<'buffer>> {
 	}
 }
 
-/// A map-decoding builder for an [`OptionItemStack`](OptionItemStack).
+/// A map-decoding builder for an [`OptionItemStack`].
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OptionItemStackBuilder<'buffer> {
 	/// The internal (Minecraft system) name of the item.

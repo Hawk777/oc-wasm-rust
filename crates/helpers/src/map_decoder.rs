@@ -6,9 +6,8 @@
 //! assist with implementing [`Decode`](minicbor::Decode) for such data.
 //!
 //! The typical approach is to implement a “builder structure” whose shape parallels that of the
-//! main structure, but with each field being an [`Option`](Option) over the type of the
-//! corresponding field in the main structure. The builder structure should then implement
-//! [`Builder`](Builder).
+//! main structure, but with each field being an [`Option`] over the type of the corresponding
+//! field in the main structure. The builder structure should then implement [`Builder`].
 //!
 //! Inheritance between structures is supported. In some cases, an object may look similar to
 //! another object but with additional keys added. In this case, the builder of the outer object

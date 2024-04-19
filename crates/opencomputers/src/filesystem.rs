@@ -50,11 +50,10 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// A filesystem component on which methods can be invoked.
 ///
-/// This type combines a filesystem address, an [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`Filesystem::lock`](Filesystem::lock), and it can be dropped to
-/// return the borrow of the invoker and buffer to the caller so they can be reused for other
-/// purposes.
+/// This type combines a filesystem address, an [`Invoker`] that can be used to make method calls,
+/// and a scratch buffer used to perform CBOR encoding and decoding. A value of this type can be
+/// created by calling [`Filesystem::lock`], and it can be dropped to return the borrow of the
+/// invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.
@@ -565,11 +564,10 @@ impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer
 
 /// A readable file handle on which methods can be invoked.
 ///
-/// This type combines a readable file handle, an [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`ReadHandle::lock`](Lockable::lock), and it can be dropped to
-/// return the borrow of the invoker and buffer to the caller so they can be reused for other
-/// purposes.
+/// This type combines a readable file handle, an [`Invoker`] that can be used to make method
+/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
+/// can be created by calling [`ReadHandle::lock`](Lockable::lock), and it can be dropped to return
+/// the borrow of the invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'handle` lifetime is the lifetime of the original file handle. The `'invoker` lifetime is
 /// the lifetime of the invoker. The `'buffer` lifetime is the lifetime of the buffer. The `B` type
@@ -682,9 +680,9 @@ impl<'handle, 'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer
 
 /// A writeable file handle on which methods can be invoked.
 ///
-/// This type combines a writeable file handle, an [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`WriteHandle::lock`](Lockable::lock), and it can be dropped to
+/// This type combines a writeable file handle, an [`Invoker`] that can be used to make method
+/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
+/// can be created by calling [`WriteHandle::lock`](Lockable::lock), and it can be dropped to
 /// return the borrow of the invoker and buffer to the caller so they can be reused for other
 /// purposes.
 ///

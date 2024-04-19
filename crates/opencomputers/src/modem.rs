@@ -356,10 +356,10 @@ impl<'invoker, 'buffer, B: 'buffer + Buffer> Lockable<'invoker, 'buffer, B> for 
 
 /// A network card on which methods can be invoked.
 ///
-/// This type combined a network card address, and [`Invoker`](Invoker) that can be used to make
-/// method calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this
-/// type can be created by calling [`Modem::lock`](Modem::lock), and it can be dropped to return
-/// the borrow of the invoker and buffer to the caller so they can be reused for other purposes.
+/// This type combined a network card address, and [`Invoker`] that can be used to make method
+/// calls, and a scratch buffer used to perform CBOR encoding and decoding. A value of this type
+/// can be created by calling [`Modem::lock`], and it can be dropped to return the borrow of the
+/// invoker and buffer to the caller so they can be reused for other purposes.
 ///
 /// The `'invoker` lifetime is the lifetime of the invoker. The `'buffer` lifetime is the lifetime
 /// of the buffer. The `B` type is the type of scratch buffer to use.
@@ -715,7 +715,7 @@ pub struct Message<'buffer, const N: usize> {
 
 	/// The parts of the packet.
 	///
-	/// Any parts beyond the end of the packet are set to [`PacketPart::Null`](PacketPart::Null).
+	/// Any parts beyond the end of the packet are set to [`PacketPart::Null`].
 	pub parts: [PacketPart<'buffer>; N],
 }
 
