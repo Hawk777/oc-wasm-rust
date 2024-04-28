@@ -207,23 +207,20 @@ mod imp {
 	use super::delta_to_duration;
 	use alloc::collections::BTreeMap;
 	use alloc::vec::Vec;
+	use core::sync::atomic::{AtomicU64, Ordering};
 	use core::task::Waker;
 	use core::time::Duration;
 	use oc_wasm_safe::computer;
 	use ordered_float::NotNan;
+	use sync_unsafe_cell::SyncUnsafeCell;
 
 	/// The type of an ID number used in places where ID numbers are used to identify wakers.
 	pub type Id = u64;
 
 	/// Allocates a waker ID number.
 	pub fn alloc_id() -> Id {
-		static mut COUNTER: u64 = 0;
-		// OC-Wasm is single-threaded, so a second thread cannot touch COUNTER at the same time.
-		// This function is a leaf (it does not call any other functions), so the same thread also
-		// cannot touch COUNTER at the same time via reentrancy.
-		let ret = unsafe { COUNTER };
-		unsafe { COUNTER = ret + 1 };
-		ret
+		static COUNTER: AtomicU64 = AtomicU64::new(0);
+		COUNTER.fetch_add(1, Ordering::Relaxed)
 	}
 
 	/// Returns the vector used to hold [`Waker`](Waker)s that are waiting for the next timeslice.
@@ -232,8 +229,8 @@ mod imp {
 	/// This function returns a mutable reference to the same object on every call. The caller must
 	/// not call `next_timeslice_queue` a second time before it has dropped the first reference.
 	unsafe fn next_timeslice_queue() -> &'static mut Vec<Waker> {
-		static mut QUEUE: Vec<Waker> = Vec::new();
-		&mut QUEUE
+		static QUEUE: SyncUnsafeCell<Vec<Waker>> = SyncUnsafeCell::new(Vec::new());
+		&mut *QUEUE.get()
 	}
 
 	/// Returns the map used to hold [`Waker`](Waker)s that are waiting for specific deadlines in
@@ -243,8 +240,9 @@ mod imp {
 	/// This function returns a mutable reference to the same object on every call. The caller must
 	/// not call `deadline_map` a second time before it has dropped the first reference.
 	unsafe fn deadline_map() -> &'static mut BTreeMap<(NotNan<f64>, u64), Waker> {
-		static mut MAP: BTreeMap<(NotNan<f64>, u64), Waker> = BTreeMap::new();
-		&mut MAP
+		static MAP: SyncUnsafeCell<BTreeMap<(NotNan<f64>, u64), Waker>> =
+			SyncUnsafeCell::new(BTreeMap::new());
+		&mut *MAP.get()
 	}
 
 	/// Returns the map used to hold [`Waker`](Waker)s that are waiting for a signal.
@@ -253,8 +251,8 @@ mod imp {
 	/// This function returns a mutable reference to the same object on every call. The caller must
 	/// not call `signal_map` a second time before it has dropped the first reference.
 	unsafe fn signal_map() -> &'static mut BTreeMap<u64, Waker> {
-		static mut MAP: BTreeMap<u64, Waker> = BTreeMap::new();
-		&mut MAP
+		static MAP: SyncUnsafeCell<BTreeMap<u64, Waker>> = SyncUnsafeCell::new(BTreeMap::new());
+		&mut *MAP.get()
 	}
 
 	/// Registers the executing task to wake up at the next timeslice.
@@ -389,6 +387,7 @@ mod imp {
 	use core::time::Duration;
 	use oc_wasm_safe::computer;
 	use ordered_float::NotNan;
+	use sync_unsafe_cell::SyncUnsafeCell;
 
 	pub type Id = ();
 
@@ -404,20 +403,24 @@ mod imp {
 		NotNan::new_unchecked(f64::INFINITY)
 	};
 
-	static mut EARLIEST_DEADLINE: NotNan<f64> = NOTNAN_INFINITY;
+	static EARLIEST_DEADLINE: SyncUnsafeCell<NotNan<f64>> = SyncUnsafeCell::new(NOTNAN_INFINITY);
 
 	pub fn alloc_id() -> Id {}
 
 	pub fn register_next_timeslice(_: &Waker) {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
-		unsafe { EARLIEST_DEADLINE = NOTNAN_ZERO };
+		unsafe { *EARLIEST_DEADLINE.get() = NOTNAN_ZERO };
 	}
 
 	pub fn register_uptime(deadline: NotNan<f64>, _: Id, _: &Waker) {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
-		unsafe { EARLIEST_DEADLINE = min(EARLIEST_DEADLINE, deadline) };
+		let old_value = unsafe { *EARLIEST_DEADLINE.get() };
+		let new_value = min(old_value, deadline);
+		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
+		// EARLIEST_DEADLINE.
+		unsafe { *EARLIEST_DEADLINE.get() = new_value };
 	}
 
 	pub fn unregister_uptime(_: NotNan<f64>, _: Id) {
@@ -438,13 +441,13 @@ mod imp {
 	pub fn shortest_requested() -> Duration {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
-		let delta = unsafe { EARLIEST_DEADLINE } - computer::uptime();
+		let delta = unsafe { *EARLIEST_DEADLINE.get() } - computer::uptime();
 		delta_to_duration(delta)
 	}
 
 	pub fn check_for_wakeups() {
 		// SAFETY: OC-Wasm is single-threaded so only one thread can be accessing
 		// EARLIEST_DEADLINE.
-		unsafe { EARLIEST_DEADLINE = NOTNAN_INFINITY };
+		unsafe { *EARLIEST_DEADLINE.get() = NOTNAN_INFINITY };
 	}
 }

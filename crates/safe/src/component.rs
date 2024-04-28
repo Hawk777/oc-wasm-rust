@@ -34,6 +34,7 @@ use core::fmt::{Display, Formatter};
 use core::marker::PhantomData;
 use core::num::NonZeroUsize;
 use core::ptr;
+use core::sync::atomic::{AtomicBool, Ordering};
 use oc_wasm_sys::component as sys;
 
 /// An object that is capable of listing components attached to the computer.
@@ -54,10 +55,12 @@ impl Lister {
 	/// subsequent calls, it will return `None`.
 	#[must_use = "A Lister can only be taken once. It needs to be saved. Discarding it means it is impossible to ever list components."]
 	pub fn take() -> Option<Self> {
-		static mut INSTANCE: Option<Lister> = Some(Self(()));
-		// SAFETY: Wasm doesn’t have threads, so only one caller can get here at a time, and the
-		// Option will be empty for all but the first caller.
-		unsafe { INSTANCE.take() }
+		static TAKEN: AtomicBool = AtomicBool::new(false);
+		if TAKEN.swap(true, Ordering::Relaxed) {
+			None
+		} else {
+			Some(Self(()))
+		}
 	}
 
 	/// Begins listing the components attached to the computer.
@@ -256,10 +259,12 @@ impl MethodLister {
 	/// subsequent calls, it will return `None`.
 	#[must_use = "A Lister can only be taken once. It needs to be saved. Discarding it means it is impossible to ever list methods."]
 	pub fn take() -> Option<Self> {
-		static mut INSTANCE: Option<MethodLister> = Some(Self(()));
-		// SAFETY: Wasm doesn’t have threads, so only one caller can get here at a time, and the
-		// Option will be empty for all but the first caller.
-		unsafe { INSTANCE.take() }
+		static TAKEN: AtomicBool = AtomicBool::new(false);
+		if TAKEN.swap(true, Ordering::Relaxed) {
+			None
+		} else {
+			Some(Self(()))
+		}
 	}
 
 	/// Begins iteration over the methods available on a component.
@@ -557,10 +562,12 @@ impl Invoker {
 	/// subsequent calls, it will return `None`.
 	#[must_use = "An Invoker can only be taken once. It needs to be saved. Discarding it means it is impossible to ever make a method call."]
 	pub fn take() -> Option<Self> {
-		static mut INSTANCE: Option<Invoker> = Some(Self(()));
-		// SAFETY: Wasm doesn’t have threads, so only one caller can get here at a time, and the
-		// Option will be empty for all but the first caller.
-		unsafe { INSTANCE.take() }
+		static TAKEN: AtomicBool = AtomicBool::new(false);
+		if TAKEN.swap(true, Ordering::Relaxed) {
+			None
+		} else {
+			Some(Self(()))
+		}
 	}
 
 	/// Starts invoking a method on a component.

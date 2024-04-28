@@ -13,6 +13,7 @@ categories = { workspace = true }
 minicbor = { workspace = true }
 oc-wasm-safe = { workspace = true }
 ordered-float = { workspace = true }
+sync-unsafe-cell = { version = "^0.1" }
 
 [features]
 default = ["alloc", "proper-waker"]
