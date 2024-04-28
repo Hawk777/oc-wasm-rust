@@ -243,15 +243,8 @@ mod imp {
 	/// This function returns a mutable reference to the same object on every call. The caller must
 	/// not call `deadline_map` a second time before it has dropped the first reference.
 	unsafe fn deadline_map() -> &'static mut BTreeMap<(NotNan<f64>, u64), Waker> {
-		static mut MAP: Option<BTreeMap<(NotNan<f64>, u64), Waker>> = None;
-		// SAFETY: BTreeMap::new() does not call register_uptime(), unregister_uptime(),
-		// first_deadline_key(), or pop_deadline_passed(), so a second mutable reference to MAP
-		// cannot be created via reentrancy. OC-Wasm is single-threaded, so a second reference to
-		// MAP cannot be created by another thread. The MAP variable is local to this function, so
-		// a second mutable reference cannot be created by other code accessing it directly. The
-		// documentation requires that the caller maintain only one reference at a time, so a
-		// second mutable reference cannot be created by additional calls to this function.
-		MAP.get_or_insert_with(BTreeMap::new)
+		static mut MAP: BTreeMap<(NotNan<f64>, u64), Waker> = BTreeMap::new();
+		&mut MAP
 	}
 
 	/// Returns the map used to hold [`Waker`](Waker)s that are waiting for a signal.
@@ -260,15 +253,8 @@ mod imp {
 	/// This function returns a mutable reference to the same object on every call. The caller must
 	/// not call `signal_map` a second time before it has dropped the first reference.
 	unsafe fn signal_map() -> &'static mut BTreeMap<u64, Waker> {
-		static mut MAP: Option<BTreeMap<u64, Waker>> = None;
-		// SAFETY: BTreeMap::new() does not call register_signal(), unregister_signal(), or
-		// pop_signal(), so a second mutable reference to MAP cannot be created via reentrancy.
-		// OC-Wasm is single-threaded, so a second reference to MAP cannot be created by another
-		// thread. The MAP variable is local to this function, so a second mutable reference cannot
-		// be created by other code accessing it directly. The documentation requires that the
-		// caller maintain only one reference at a time, so a second mutable reference cannot be
-		// created by additional calls to this function.
-		MAP.get_or_insert_with(BTreeMap::new)
+		static mut MAP: BTreeMap<u64, Waker> = BTreeMap::new();
+		&mut MAP
 	}
 
 	/// Registers the executing task to wake up at the next timeslice.
