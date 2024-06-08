@@ -12,7 +12,7 @@ extern "C" {
 	#[link_name = "type"]
 	pub fn component_type(address: *const u8, buffer: *mut u8, buffer_length: usize) -> isize;
 
-	pub fn slot(address: *const u8, length: usize) -> i32;
+	pub fn slot(address: *const u8) -> i32;
 
 	#[link_name = "methodsStartComponent"]
 	pub fn methods_start_component(address: *const u8) -> i32;

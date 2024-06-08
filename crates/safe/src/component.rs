@@ -236,8 +236,8 @@ pub fn component_type<'buf>(address: &Address, buffer: &'buf mut [u8]) -> Result
 pub fn slot(address: &Address) -> Result<u32> {
 	let address = address.as_bytes();
 	Error::from_i32(
-		// SAFETY: slot permits a string pointer/length pair.
-		unsafe { sys::slot(address.as_ptr(), address.len()) },
+		// SAFETY: slot permits a UUID input pointer.
+		unsafe { sys::slot(address.as_ptr()) },
 	)
 }
 
