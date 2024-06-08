@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.12.0"
+version = "0.12.1"
 authors = ["Christopher Head <chead@chead.ca>"]
 edition = "2021"
 repository = "https://gitlab.com/Hawk777/oc-wasm-rust"
